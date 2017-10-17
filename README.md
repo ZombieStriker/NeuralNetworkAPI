@@ -20,12 +20,14 @@ There are a few things that you should know before attempting to make a new Neur
   public CustomNeuralNetwork(Map<String,Object> map){
     super(map);
   }
-```` ...and let the ConfigurationSerialization class register the object in the onEnable or onLoad of the main class like so:
+````
+ ...and let the ConfigurationSerialization class register the object in the onEnable or onLoad of the main class like so:
 ````java
   public void onEnable(){
     ConfigurationSerialization.registerClass(CustomNeuralNetwork.class);
   }
-```` After this, you should be able to save and load the `NNBaseEntity` to and from the config. Note that you cannot save the `NeuralNetwork` instance to the config.
+````
+ After this, you should be able to save and load the `NNBaseEntity` to and from the config. Note that you cannot save the `NeuralNetwork` instance to the config.
 * Ideally, no other part of your plugin should directly reference your custom neural network object. Instead, all calls to that object should be done through the NeuralNetwork object.
 * For best results, only call `DeepReinformentUtil.instantaneousReinforce` when the NN failed in any way. Calling it when it returned the correct value tends to make it "forget" what it may have already learned.
 * This API is still in development. Some aspects of this plugin may change in future updates. Continually to check the github page for updates and make sure your project always references the newest version.
