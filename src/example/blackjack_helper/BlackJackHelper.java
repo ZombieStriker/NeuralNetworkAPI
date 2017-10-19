@@ -1,8 +1,25 @@
 package example.blackjack_helper;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.*;
 
-import org.apache.commons.lang.*;
+//import org.apache.commons.lang.ArrayUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 
@@ -11,9 +28,14 @@ import me.zombie_striker.neuralnetwork.*;
 import me.zombie_striker.neuralnetwork.neurons.*;
 import me.zombie_striker.neuralnetwork.neurons.input.InputNumberNeuron;
 import me.zombie_striker.neuralnetwork.senses.Sensory2D_Numbers;
-import me.zombie_striker.neuralnetwork.util.DeepReinformentUtil;
+import me.zombie_striker.neuralnetwork.util.DeepReinforcementUtil;
 
 public class BlackJackHelper extends NNBaseEntity implements Controler {
+
+	/**
+	 * This bot will help you play blackjack. Given your hand, it will tell you
+	 * if you should hit or stay.
+	 */
 
 	public Sensory2D_Numbers hand_view = new Sensory2D_Numbers(10, 15);
 
@@ -22,42 +44,83 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 	QuickBlackJackHandler game = new QuickBlackJackHandler();
 	List<Card> hands;
 	List<Card> house_hands;
-
+	/**
+	 * New decks are usefull for making sure the same arangement of cards is
+	 * rare.
+	 */
 	boolean newDeck = true;
 
 	public BlackJackHelper(boolean createAI) {
-		super(false);
-		// this.senses.add(hand_view);
+		super(false, 2000);
+
 		if (createAI) {
-			this.ai = NNAI.generateAI(this, 1, 3, "Should Stay");
+			this.ai = NNAI.generateAI(this, 1, 5, "Should Stay");
 			// Stay = 0, Hit = 1;
 			for (int amountOfCardsInHand = 0; amountOfCardsInHand < 10; amountOfCardsInHand++) {
 				for (int highestCardIndex = 11; highestCardIndex >= 2; highestCardIndex--) {
 					// 1st is the amount of cards in the hand. 2nd is the value
-					// of the card
+					// of the card. 10s,j,q,k are all treated as tens. A's are
+					// 11.
 					InputNumberNeuron.generateNeuronStatically(ai,
 							amountOfCardsInHand, highestCardIndex,
 							this.hand_view);
 				}
 			}
 
-			// Creates the neurons for layer 1.
-			for (int neurons = 0; neurons < 27; neurons++) {
+			// Three layers of inputs for maximum pattern recognition
+			for (int neurons = 0; neurons < 43; neurons++)
 				Neuron.generateNeuronStatically(ai, 1);
-			}
+			for (int neurons = 0; neurons < 25; neurons++)
+				Neuron.generateNeuronStatically(ai, 2);
+			for (int neurons = 0; neurons < 15; neurons++)
+				Neuron.generateNeuronStatically(ai, 3);
+
+			// Its best just to keep 1 bias neuron, though it normally
+			// deactivates itself on its own.
 			BiasNeuron.generateNeuronStatically(ai, 0);
-			BiasNeuron.generateNeuronStatically(ai, 1);
 			connectNeurons();
 		}
 		this.controler = this;
-		this.setNeuronsPerRow(0, 11);
+		this.setNeuronsPerRow(0, 10);
 	}
 
 	@Override
 	public String update() {
-		if (!shouldLearn) {
+		/**
+		 * Since this method is far to big to comment on everything, here is the
+		 * bacis of what is happening:
+		 * 
+		 * 1)Create a new deck if it needs to
+		 * 
+		 * 2)If training, give the NN and the houseAI two new cards.
+		 * 
+		 * 3) Tick and think.
+		 * 
+		 * 4) It is says hit, give it a new card. If it goes over 21, it loses
+		 * the game. Else, it continues playing with a new card in its deck.
+		 * There are no new decks if this happens
+		 * 
+		 * 5)Else, if it says to stay, check if it is equal to 21. If so, it
+		 * wins. Else....
+		 * 
+		 * 6) Let the dealerAI play. It will pick cards up until it goes over
+		 * 18, in which case it stays. Although it can still go over, stopping
+		 * at 18 means it is less likely
+		 * 
+		 * 7) Check if the NN's cards are under 21, but higher than the house.
+		 * If so, it wins. If not, check the next card it would have picked if
+		 * it had hit.
+		 * 
+		 * 8) If that card is still under 21, noWin is set to false.
+		 * 
+		 * 9) After all that, check if it lost, and that there way a way to win
+		 * (we don't want to punish the NN if it would have lost even if it
+		 * hit). If this is true, use DeepReinforcement.
+		 * 
+		 * 10) Return the message.
+		 */
+		if (!shouldLearn)
 			newDeck = true;
-		}
 		if (newDeck) {
 			if (shouldLearn) {
 				int k = 0;
@@ -106,12 +169,20 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 			for (int i = 0; i < house_hands.size(); i++)
 				allCardsH[i] = house_hands.get(i).value;
 
-			Arrays.sort(allCards);
-			Arrays.sort(allCardsH);
-			ArrayUtils.reverse(allCards);
-			ArrayUtils.reverse(allCardsH);
-
+			/**
+			 * Sorting by size does increase the accuracy by 1-2% (Given a 2000
+			 * entry set), however this does not actually teach the NN how to
+			 * add, just which neurons it should look for if it should stay/hit.
+			 * Considering the small percentage increase and the dishonesty of
+			 * what is going on, this has been commented out. However, if you
+			 * would like to test it, feel free to remove the marks.
+			 */
+			/*
+			 * Arrays.sort(allCards); Arrays.sort(allCardsH);
+			 * ArrayUtils.reverse(allCards); ArrayUtils.reverse(allCardsH);
+			 */
 			// TODO: Do not sort by size
+
 			for (int i = 0; i < allCards.length; i++)
 				values.add(allCards[i]);
 			for (int i = 0; i < allCardsH.length; i++)
@@ -126,17 +197,10 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 					this.hand_view.changeNumberAt(i, col, isValue ? 1 : 0);
 				}
 			}
-			/*
-			 * for (int i = 0; i < 2; i++) { for (int col = 0; col <= 11; col++)
-			 * { boolean isValue = false; if (valuesH.size() > i &&
-			 * valuesH.get(i) == col) { isValue = true; }
-			 * base.hand_view.changeNumberAt(i + 10, col, isValue ? 1 : 0); } }
-			 */
 		}
 
-		this.ai.tick();
-		boolean[] thought = this.ai.think();
-		boolean shouldStay = this.getAI().getNeuronFromId(0).isTriggered();
+		boolean[] thought = tickAndThink();
+		boolean shouldStay = thought[0];
 
 		float accuracy = 0;
 
@@ -149,14 +213,10 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 						+ ",");
 			}
 			newDeck = true;
-			return (((thought.length > 2 ? this.ai.getNeuronFromId(2)
-					.isTriggered() : false) ? ChatColor.GOLD
+			return (((thought.length > 2 ? thought[2] : false) ? ChatColor.GOLD
 					: shouldStay ? ChatColor.BLUE : ChatColor.WHITE)
-					+ ((shouldStay ? "Stay" : "Hit"))
-					+ "|= "
-					+ sb.toString()
-					+ "|  " + shouldStay + "|Risk = " + (1.0 - Math.abs(ai
-					.getNeuronFromId(0).getTriggeredStength())));
+					+ "You should:" + ((shouldStay ? "Stay" : "Hit")) + "|= " + sb
+						.toString());
 
 		} else {
 
@@ -169,9 +229,9 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 				if (hands.size() <= 10) {
 					// Hit
 					int totalHand = 0;
-					for (Card c : hands) {
+					for (Card c : hands)
 						totalHand += c.value;
-					}
+
 					Card cc = game.cardsInDeck[++game.currentIndex];
 					hands.add(cc);
 					totalHand += cc.value;
@@ -187,38 +247,19 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 					} else {
 						continuePlaying = true;
 						reasonForOutcome = "Hit; good enough";
-
-						// TODO: No need to calculate if the use hit. If it's
-						// under 21, its good enough
-						/*
-						 * wonTheGame=true; List<Card> tempHH = new
-						 * ArrayList<>(house_hands); // The Dealer's AI int
-						 * totalHouseHand = 0; for (Card c : tempHH) {
-						 * totalHouseHand += c.value; } for (int i = 2; i < 10;
-						 * i++) { if (//*game.cardsInDeck[game.currentIndex - 1
-						 * + (i - 2)].value + totalHouseHand > 21|| *8/
-						 * game.cardsInDeck[game.currentIndex - 1 + (i -
-						 * 2)].value + totalHouseHand>=18) { break; }
-						 * tempHH.add(game.cardsInDeck[game.currentIndex - 1 +
-						 * (i - 2)]); totalHouseHand += tempHH.get(i).value; }
-						 * if ((totalHand - cc.value) > totalHouseHand||) {
-						 * wonTheGame = false; reasonForOutcome =
-						 * "Hit; better if stayed"; }else{ continuePlaying =
-						 * true; reasonForOutcome = "Hit; good enough"; }
-						 */
+						wonTheGame = true;
 					}
 				} else {
 					wonTheGame = false;
 					reasonForOutcome = "Hit; Over 10 cards.";
 				}
-
 			} else {
 
 				// Stay
 				int totalHand = 0;
-				for (Card c : hands) {
+				for (Card c : hands)
 					totalHand += c.value;
-				}
+
 				if (totalHand > 21) {
 					wonTheGame = false;
 					reasonForOutcome = ChatColor.DARK_AQUA
@@ -230,14 +271,12 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 
 					// The Dealer's AI
 					int totalHouseHand = 0;
-					for (Card ch : house_hands) {
+					for (Card ch : house_hands)
 						totalHouseHand += ch.value;
-					}
+
+					// Dealer draw
 					for (int i = 2; i < 10; i++) {
-						if (/*
-							 * game.cardsInDeck[game.currentIndex + 1].value +
-							 * totalHouseHand > 21
-							 */game.cardsInDeck[game.currentIndex - 1 + (i - 2)].value
+						if (game.cardsInDeck[game.currentIndex - 1 + (i - 2)].value
 								+ totalHouseHand >= 18) {
 							break;
 						}
@@ -248,13 +287,10 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 					if (totalHouseHand > 21) {
 						wonTheGame = true;
 						reasonForOutcome = "Stayed; dealer went over 21";
-					} else if (totalHand > totalHouseHand
-							&& totalHouseHand != 21) {
+					} else if (totalHand > totalHouseHand) {
 						// The NN is closer to 21
-						// if (loops == 0) {
 						wonTheGame = true;
 						reasonForOutcome = "Stayed; closer to 21";
-						// }
 					} else {
 						wonTheGame = false;
 						if (house_hands.size() > 2 ? (totalHand
@@ -263,31 +299,34 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 										+ game.cardsInDeck[game.currentIndex + 1].value <= 21)) {
 							reasonForOutcome = "Stayed; Should have hit";
 						} else {
+							// Even if the NN drew another card, they would not
+							// have won
 							noWin = true;
 							reasonForOutcome = "Stayed; No-Win";
 						}
 					}
-					// }
-
 				}
 			}
-			if (continuePlaying == false)
-				if ((!noWin || wonTheGame))
-					this.getAccuracy().addEntry(wonTheGame);
+			// If end of game, add result
+			// TODO: EDIT testing: even if the game continues, mark it as solved
+			// as long as they CAN continue.
+			// if (!continuePlaying)
+			if (!noWin || wonTheGame)
+				this.getAccuracy().addEntry(wonTheGame);
 			accuracy = (float) this.getAccuracy().getAccuracy();
 
 			StringBuilder sb = new StringBuilder();
 			for (Card c : hands) {
 				sb.append((c.number + "").replaceAll("11", "A")
 						.replaceAll("12", "j").replaceAll("13", "q")
-						.replaceAll("14", "q")
+						.replaceAll("14", "k")
 						+ ",");
 			}
 			StringBuilder sb2 = new StringBuilder();
 			for (Card c : house_hands) {
 				sb2.append((c.number + "").replaceAll("11", "A")
 						.replaceAll("12", "j").replaceAll("13", "q")
-						.replaceAll("14", "q")
+						.replaceAll("14", "k")
 						+ ",");
 			}
 
@@ -304,22 +343,22 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 			}
 
 			int totalHand = 0, totalHHand = 0;
-			for (Card c : hands) {
+			for (Card c : hands)
 				totalHand += c.value;
-			}
-			for (int i = 0; i < 2; i++) {
+
+			for (int i = 0; i < 2; i++)
 				totalHHand += house_hands.get(i).value;
-			}
 
 			double chanceForRightCard = 0;
 
-			for (int i = hands.size() - k; i < 52; i++) {
+			// +2 for the two in the houses hand
+			for (int i = hands.size() + 2 - k; i < 52; i++) {
 				if (totalHand + game.cardsInDeck[i].value <= 21
 						&& totalHand + game.cardsInDeck[i].value > totalHHand)
 					chanceForRightCard++;
 			}
 
-			chanceForRightCard /= (52 - hands.size() + k);
+			chanceForRightCard /= (52 - 2 - hands.size() + k);
 			if (chanceForRightCard < 0.5)
 				lowChanceForSuccess = true;
 			// Re-add the card
@@ -328,25 +367,26 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 
 			// IMPROVE IT
 			HashMap<Neuron, Double> map = new HashMap<>();
-			// TODO: Test if right: If staying wins or if hitting loses, set to
-			// shouldStay. Else, hit
+
+			// If staying wins or if hitting loses, set shouldStay to should
+			// stay (+1). Else, hit (-1)
 			if (shouldStay == wonTheGame) {
-				map.put(ai.getNeuronFromId(0), -1.0/*-(chanceForRightCard)*/);
+				map.put(ai.getNeuronFromId(0), 1.0);
 			} else {
-				map.put(ai.getNeuronFromId(0), 1.0/* (1 - chanceForRightCard) */);
+				map.put(ai.getNeuronFromId(0), -1.0);
 			}
 
-			// If you won the game, or lost but was NOT in a no win
-			// situation
-			if ((!wonTheGame && !noWin)) {
-				DeepReinformentUtil.instantaneousReinforce(this, map, 1);
-			}
+			// If you did not win, and there was a way to win.
+			if (!wonTheGame && !noWin)
+				DeepReinforcementUtil.instantaneousReinforce(this, map, 1);
 
+			// If game ended, ask for new deck
 			if (!continuePlaying) {
 				newDeck = true;
 			} else {
 				newDeck = false;
 			}
+
 			return (((int) (100 * accuracy))
 					+ "|"
 					+ (lowChanceForSuccess != shouldStay ? ChatColor.GOLD
@@ -366,9 +406,9 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 
 	@Override
 	public NNBaseEntity clone() {
-		BlackJackHelper thi = new BlackJackHelper(false);
-		thi.ai = this.ai;
-		return thi;
+		BlackJackHelper clone = new BlackJackHelper(false);
+		clone.ai = this.ai.clone(clone);
+		return clone;
 	}
 
 	@Override
@@ -408,6 +448,9 @@ public class BlackJackHelper extends NNBaseEntity implements Controler {
 
 	@Override
 	public void setBase(NNBaseEntity base) {
+		// This is empty because there is no need to set the base. However,
+		// since some people may want to have the controler in a seperate class,
+		// this method is still needed
 	}
 
 }

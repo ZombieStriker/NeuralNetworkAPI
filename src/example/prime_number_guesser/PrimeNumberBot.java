@@ -1,5 +1,22 @@
 package example.prime_number_guesser;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.HashMap;
 
 import org.bukkit.ChatColor;
@@ -10,63 +27,61 @@ import me.zombie_striker.neuralnetwork.neurons.BiasNeuron;
 import me.zombie_striker.neuralnetwork.neurons.Neuron;
 import me.zombie_striker.neuralnetwork.neurons.input.InputNumberNeuron;
 import me.zombie_striker.neuralnetwork.senses.Sensory2D_Numbers;
-import me.zombie_striker.neuralnetwork.util.DeepReinformentUtil;
+import me.zombie_striker.neuralnetwork.util.DeepReinforcementUtil;
 
 public class PrimeNumberBot extends NNBaseEntity implements Controler {
 
-	public Sensory2D_Numbers binary = new Sensory2D_Numbers(4, 10);
+	public Sensory2D_Numbers binary = new Sensory2D_Numbers(2, 10);
 
 	public boolean wasCorrect = true;
 
 	public HashMap<Integer, Boolean> ifNumberIsPrime = new HashMap<>();
 
 	public PrimeNumberBot(boolean createAI) {
-		super(false);
+		super(false,2000);
+		//We want to store the last 2000 entries, so we know how accurate it is.
 		initValidPrimes();
 		// this.senses.add(binary);
 
 		if (createAI) {
-			this.ai = NNAI.generateAI(this, 1, 4, "is A Prime");
+			this.ai = NNAI.generateAI(this, 1, 5, "is A Prime");
 
-			for (int trueOrFalse = 0; trueOrFalse < 2; trueOrFalse++) {
+			for (int trueOrFalse = 0; trueOrFalse < 1; trueOrFalse++) {
+				//Change 1 to 2 if you also want to include if bit is false
 				for (int binaryIndex = 0; binaryIndex < 10; binaryIndex++) {
-					// 1st one is what index, the next is the actual character
 					InputNumberNeuron.generateNeuronStatically(ai, trueOrFalse,
 							binaryIndex, this.binary);
 				}
 			}
+			BiasNeuron.generateNeuronStatically(ai,0);
 
 			// Creates the neurons for layer 1.
-			for (int neurons = 0; neurons < 9; neurons++) {
+			for (int neurons = 0; neurons < 40; neurons++) 
 				Neuron.generateNeuronStatically(ai, 1);
+			for (int neurons = 0; neurons < 20; neurons++) 
 				Neuron.generateNeuronStatically(ai, 2);
-			}
-			BiasNeuron.generateNeuronStatically(ai, 0);
-			BiasNeuron.generateNeuronStatically(ai, 1);
-			BiasNeuron.generateNeuronStatically(ai, 2);
+			for (int neurons = 0; neurons < 10; neurons++) 
+				Neuron.generateNeuronStatically(ai, 3);
+			
 
 			connectNeurons();
 		}
+		this.setNeuronsPerRow(0, 10);
 		this.controler = this;
 	}
+	
+	private int lastNumber = 0;
 
 	@Override
-	public String update() {
+	public String update() {		
 		if (shouldLearn) {
-			boolean[] bbb = numberToBinaryBooleans((int) (Math.random() * 1023));
-			// boolean[] bbb2 = numberToBinaryBooleans((int) (Math.random() *
-			// 230));
+			boolean[] bbb = numberToBinaryBooleans((lastNumber++%1023)/*(int) (Math.random() * 1023)*/);
 			for (int i = 0; i < bbb.length; i++) {
 				binary.changeNumberAt(0, i, (bbb[i]) ? 1 : 0);
 				binary.changeNumberAt(1, i, (bbb[i]) ? 0 : 1);
 			}
 		}
 		boolean[] thought = tickAndThink();
-		// boolean result =
-		// base.getAI().getNeuronFromId(0).isTriggered();//.getTriggeredStength()
-		// > base.getAI().getNeuronFromId(1).getTriggeredStength();
-
-		// boolean isAdditionCorrect = false;
 		float accuracy = 0;
 
 		// If it isprime:
@@ -79,7 +94,7 @@ public class PrimeNumberBot extends NNBaseEntity implements Controler {
 		boolean result = ifNumberIsPrime.get(number);
 
 		if (!shouldLearn) {
-			return ((ai.getNeuronFromId(0).isTriggered() ? ChatColor.DARK_GREEN
+			return ((thought[0] ? ChatColor.DARK_GREEN
 					: ChatColor.DARK_RED) + "|=" + number + "|WasPrime-Score " + ((int) (100 * (ai
 					.getNeuronFromId(0).getTriggeredStength()))));
 
@@ -91,11 +106,11 @@ public class PrimeNumberBot extends NNBaseEntity implements Controler {
 
 			// IMPROVE IT
 			HashMap<Neuron, Double> map = new HashMap<>();
-			map.put(ai.getNeuronFromId(0), wasCorrect ? 1 : -1.0);
+			map.put(ai.getNeuronFromId(0), result ? 1 : -1.0);
 			if (!wasCorrect)
-				DeepReinformentUtil.instantaneousReinforce(this, map, 1);
+				DeepReinforcementUtil.instantaneousReinforce(this, map, 1);
 			return ((wasCorrect ? ChatColor.GREEN : ChatColor.RED) + "acc "
-					+ ((int) (100 * accuracy)) + "|=" + number + "|  " + result
+					+ ((int) (100 * accuracy)) + "|=" + number + "|correctResp=" + result
 					+ "|WasPrime-Score " + ((int) (100 * (ai.getNeuronFromId(0)
 					.getTriggeredStength()))));
 		}

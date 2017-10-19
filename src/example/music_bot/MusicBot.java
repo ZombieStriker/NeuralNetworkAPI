@@ -1,5 +1,22 @@
 package example.music_bot;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.*;
 
 import org.bukkit.*;
@@ -12,17 +29,26 @@ import me.zombie_striker.neuralnetwork.*;
 import me.zombie_striker.neuralnetwork.neurons.*;
 import me.zombie_striker.neuralnetwork.neurons.input.*;
 import me.zombie_striker.neuralnetwork.senses.Sensory2D_Numbers;
-import me.zombie_striker.neuralnetwork.util.DeepReinformentUtil;
+import me.zombie_striker.neuralnetwork.util.DeepReinforcementUtil;
 import me.zombie_striker.nnmain.Main;
 
-public class MusicBot extends NNBaseEntity implements Controler{
+public class MusicBot extends NNBaseEntity implements Controler {
+
+	/**
+	 * I have not actually updated this class, as this was one of the first bots
+	 * I made and there is a lot of improvements that could be made. I'll update
+	 * it later (maybe). 
+	 * 
+	 * For now, do not use this as an example of how a NN should be made/used.
+	 */
 
 	public Sensory2D_Numbers numbers = new Sensory2D_Numbers(10, 90);
 
 	public static final int PITCHES = 24;
-	
+
 	// public boolean wasCorrect = true;
-	//Different than should learn. This erases the inputs so the trained outputs are not what it is starting off of
+	// Different than should learn. This erases the inputs so the trained
+	// outputs are not what it is starting off of
 	public boolean wasLearning = false;
 
 	public double[][] trainingValues;
@@ -34,11 +60,13 @@ public class MusicBot extends NNBaseEntity implements Controler{
 		super(false);
 		addMusicTrainingData(this);
 		if (createAI) {
-			//Creates a new AI with (Pitches) amount of output neurons and with three layers (which includes the input and output layers).
+			// Creates a new AI with (Pitches) amount of output neurons and with
+			// three layers (which includes the input and output layers).
 			this.ai = NNAI.generateAI(this, PITCHES, 3);
 			numbers.changeMatrix(new double[PITCHES][90]);
 
-			//Creates input number neurons for the Pitches (rows) and the memory (columns)
+			// Creates input number neurons for the Pitches (rows) and the
+			// memory (columns)
 			for (int rows = 0; rows < numbers.getMatrix().length; rows++) {
 				for (int col1 = 0; col1 < numbers.getMatrix()[0].length; col1++) {
 					InputNumberNeuron.generateNeuronStatically(ai, rows, col1,
@@ -46,16 +74,17 @@ public class MusicBot extends NNBaseEntity implements Controler{
 				}
 			}
 
-			//Generates neurons  for layer 1.
+			// Generates neurons for layer 1.
 			for (int neurons = 0; neurons < 38; neurons++) {
 				Neuron.generateNeuronStatically(ai, 1);
 			}
-			
-			//Generate 10 tick rates, hopefully one of them will help with the rhythm.
-			for(int tickrate = 1; tickrate <= 10; tickrate++)
-			InputTickNeuron.generateNeuronStatically(ai,tickrate);
-			
-			//Generate a bia neuron for each layer.
+
+			// Generate 10 tick rates, hopefully one of them will help with the
+			// rhythm.
+			for (int tickrate = 1; tickrate <= 10; tickrate++)
+				InputTickNeuron.generateNeuronStatically(ai, tickrate);
+
+			// Generate a bia neuron for each layer.
 			BiasNeuron.generateNeuronStatically(ai, 0);
 			BiasNeuron.generateNeuronStatically(ai, 1);
 
@@ -63,7 +92,6 @@ public class MusicBot extends NNBaseEntity implements Controler{
 		}
 		this.controler = this;
 	}
-
 
 	// TODO: This is used for denoting pitch. All conversions from decimal to
 	// whole number should use this value.
@@ -84,7 +112,8 @@ public class MusicBot extends NNBaseEntity implements Controler{
 				base.ai.setCurrentTick(0);
 				training_step = 0;
 			}
-			double[][] values = new double[base.numbers.getMatrix().length][base.numbers.getMatrix()[0].length];
+			double[][] values = new double[base.numbers.getMatrix().length][base.numbers
+					.getMatrix()[0].length];
 			for (int row = 0; row < values.length; row++) { // Pitchstamp
 				for (int col = 0; col < values[row].length; col++) { // Timestamp
 					for (int channels = 0; channels < trainingValues.length; channels++)
@@ -143,7 +172,7 @@ public class MusicBot extends NNBaseEntity implements Controler{
 						(wasCorrect ? 1 : -1.0));
 			}
 
-			//This determines if the output is equal to the training data.
+			// This determines if the output is equal to the training data.
 			boolean playedRightNotes = true;
 			for (int i = 0; i < actions.length; i++) {
 				boolean wasToldToBeTrue = false;
@@ -162,44 +191,42 @@ public class MusicBot extends NNBaseEntity implements Controler{
 				}
 			}
 
-			//Adds weather the notes were played correctly to the accuracy list.
+			// Adds weather the notes were played correctly to the accuracy
+			// list.
 			this.getAccuracy().addEntry(playedRightNotes);
 			int total_accuracy = this.getAccuracy().getAccuracyAsInt();
 
-			//Make corrections so outputs are what they should be. If it made a mistake, do this three times.
-			DeepReinformentUtil.instantaneousReinforce(base,
+			// Make corrections so outputs are what they should be. If it made a
+			// mistake, do this three times.
+			DeepReinforcementUtil.instantaneousReinforce(base,
 					desiredTriggerStrengths, ((playedRightNotes) ? 1 : 3));
-			
-			//Logger: Print out all the triggered neurons. If the output was correct, the message will be green.
+
+			// Logger: Print out all the triggered neurons. If the output was
+			// correct, the message will be green.
 			StringBuilder activeNeurons = new StringBuilder();
-			for(Neuron omn : base.ai.getOutputNeurons()){
-				if(omn.isTriggered())
-					activeNeurons.append(omn.getID()+", ");
+			for (Neuron omn : base.ai.getOutputNeurons()) {
+				if (omn.isTriggered())
+					activeNeurons.append(omn.getID() + ", ");
 			}
-		return (
-					((playedRightNotes) ? ChatColor.GREEN : ChatColor.RED)
-							+ ""
-							+ total_accuracy
-							+ "% : Active neurons = "+activeNeurons.toString());
+			return (((playedRightNotes) ? ChatColor.GREEN : ChatColor.RED) + ""
+					+ total_accuracy + "% : Active neurons = " + activeNeurons
+						.toString());
 		}
 		return null;
 	}
 
-
 	@Override
 	public void setInputs(CommandSender initiator, String[] args) {
-		// 
+		//
 		final Player player = (Player) initiator;
-		final int ticksMax = (args.length > 1) ? Integer.parseInt(args[1])
-				: 20;
+		final int ticksMax = (args.length > 1) ? Integer.parseInt(args[1]) : 20;
 
 		final Location base = player.getLocation().clone();
 
 		final int channels = this.trainingValues.length;
 
 		for (int i = 0; i < channels; i++) {
-			base.clone().add(i, 0, 0).getBlock()
-					.setType(Material.NOTE_BLOCK);
+			base.clone().add(i, 0, 0).getBlock().setType(Material.NOTE_BLOCK);
 		}
 		new BukkitRunnable() {
 			int tick = 0;
@@ -224,7 +251,7 @@ public class MusicBot extends NNBaseEntity implements Controler{
 					cancel();
 			}
 		}.runTaskTimer(Main.getMainClass(), 30, 9);
-		
+
 	}
 
 	public double[] convertToDoubles(String pitches) {
@@ -284,10 +311,8 @@ public class MusicBot extends NNBaseEntity implements Controler{
 				convertToDoubles("1           .1           .1           .1           .1        68a .1        d   .1     1     .1     1  h  .a           ."),
 				convertToDoubles("1           .1           .1           .1           .1            .f            .f     f     .f     f     .0           .") };
 
-		this
-				.setTrainingSong(song);
+		this.setTrainingSong(song);
 	}
-	
 
 	@Override
 	public NNBaseEntity clone() {
@@ -296,8 +321,6 @@ public class MusicBot extends NNBaseEntity implements Controler{
 		return thi;
 	}
 
-
-	
 	public void setBase(NNBaseEntity t) {
 		this.base = (MusicBot) t;
 	}

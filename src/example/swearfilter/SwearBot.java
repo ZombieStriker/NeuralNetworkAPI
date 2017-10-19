@@ -1,5 +1,22 @@
 package example.swearfilter;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -10,36 +27,38 @@ import me.zombie_striker.neuralnetwork.*;
 import me.zombie_striker.neuralnetwork.neurons.*;
 import me.zombie_striker.neuralnetwork.neurons.input.InputLetterNeuron;
 import me.zombie_striker.neuralnetwork.senses.Sensory2D_Letters;
-import me.zombie_striker.neuralnetwork.util.DeepReinformentUtil;
+import me.zombie_striker.neuralnetwork.util.DeepReinforcementUtil;
 
 public class SwearBot extends NNBaseEntity implements Controler {
 
 	public static char[] letters = InputLetterNeuron.letters;
+	//Returns capital letters A-Z and 0-9
 
 	public Sensory2D_Letters word = new Sensory2D_Letters("none");
-
 	public boolean wasCorrect = true;
-
-	// public HashMap<String, Boolean> isSwearWord = new HashMap<>();
 
 	public List<String> cleanWords = new ArrayList<String>();
 	public List<String> swearWords = new ArrayList<String>();
 
 	public String filterType = "null";
+	//Makes it easier to print out what each NN is testing for.
 
 	public SwearBot(boolean createAI) {
-		// Only used for my NN creating system. Sweartypes should be used
-		// instead.
+		// Only used for my Demo system. You do not actually need this constructor for your NNs.
 	}
 
 	public SwearBot(boolean createAI, String sweartype) {
-		super(false);
+		super(false, 2000);
+		/**
+		 * The second value for the super is how many points are stored for
+		 * accuracy. This means that the accuracy printed
+		 */
 		// initValidNames();
 
 		if (createAI) {
 			// Generates an ai with ONE output, which is equal to whether it is
 			// a player
-			this.ai = NNAI.generateAI(this, 1, 3, "Is a swear word");
+			this.ai = NNAI.generateAI(this, 1, 4, "Is a swear word");
 
 			for (int index = 0; index < 16; index++) {
 				for (int character = 0; character < letters.length; character++) {
@@ -48,10 +67,18 @@ public class SwearBot extends NNBaseEntity implements Controler {
 							character, this.word);
 				}
 			}
+			/**
+			 * Two layers are used for this one because there are a lot of
+			 * nuances in language. Adding more hidden layers will increase the
+			 * amount of variance and specificity that it will look for.
+			 */
 			// Creates the neurons for layer 1.
-			for (int neurons = 0; neurons < 56; neurons++) {
+			for (int neurons = 0; neurons < 50; neurons++) 
 				Neuron.generateNeuronStatically(ai, 1);
-			}
+			// Creates the neurons for layer 2
+			for (int neurons = 0; neurons < 15; neurons++) 
+				Neuron.generateNeuronStatically(ai, 2);
+			
 			BiasNeuron.generateNeuronStatically(ai, 0);
 			BiasNeuron.generateNeuronStatically(ai, 1);
 
@@ -61,6 +88,9 @@ public class SwearBot extends NNBaseEntity implements Controler {
 
 		this.setNeuronsPerRow(0, letters.length);
 
+		/**
+		 * Since there is no universal quality in the arrangement of all 5 swear words, each NN has to be trained for each specific swear word.
+		 */
 		filterType = sweartype;
 		if (sweartype.equals("fuck")) {
 			initValidNames(0);
@@ -82,6 +112,7 @@ public class SwearBot extends NNBaseEntity implements Controler {
 		if (shouldLearn) {
 			boolean useSwear = ThreadLocalRandom.current().nextBoolean()
 					&& ThreadLocalRandom.current().nextBoolean();
+			//The booleans are doubled to make sure swear words happen 1/4 the time, as it is more important to make sure clean words are not flagged than to go over swear words.
 			if (useSwear) {
 				word.changeWord((String) swearWords.toArray()[(int) ((swearWords
 						.size() - 1) * Math.random())]);
@@ -89,29 +120,30 @@ public class SwearBot extends NNBaseEntity implements Controler {
 				word.changeWord((String) cleanWords.toArray()[(int) ((cleanWords
 						.size() - 1) * Math.random())]);
 			}
-			/* this.word .changeWord((String)
-			 * isSwearWord.keySet().toArray()[(int) ((isSwearWord
-			 * .keySet().size() - 1) * Math.random())]);
-			 */
 		}
 		boolean result = tickAndThink()[0];
 
 		if (!shouldLearn) {
 			return "" + result;
+			
 		} else {
 			boolean isswear = swearWords.contains(word.getWord());
-			float accuracy = 0;
 			wasCorrect = result == isswear;
-			// isSwearWord.get(base.word.getWord());
+			//Returns if it was a swear word;
+			
 			this.getAccuracy().addEntry(wasCorrect);
-			accuracy = (float) this.getAccuracy().getAccuracy();
+			float accuracy = (float) this.getAccuracy().getAccuracy();
 
 			// IMPROVE IT
 			Neuron[] array = new Neuron[1];
 			if (isswear)
 				array[0] = ai.getNeuronFromId(0);
+			//Instead of hashmaps, since there is only 1 output neuron, is is easier to do this instead of defining the suggested value.
+			//Adding it to the array means the suggested value is +1. Not having it means it is -1.
+			
+			//only learn when it was not correct.
 			if (!wasCorrect) {
-				DeepReinformentUtil.instantaneousReinforce(this, array, 1);
+				DeepReinforcementUtil.instantaneousReinforce(this, array, 1);
 			}
 			return ((wasCorrect ? ChatColor.GREEN : ChatColor.RED) + "acc "
 					+ ((int) (100 * accuracy)) + "|=" + word.getWord() + "|  "
@@ -147,57 +179,29 @@ public class SwearBot extends NNBaseEntity implements Controler {
 		 */
 		if (i == 0)
 			a(true, "  fuck", "  fuk", "  fuc", "  fck", "  phuc", "  phuk",
-					"  fucking", "  fuckr", "  fucking", "  fucker",
-					"  fucker", "  fucccckkking", "  fuuuuck", "  fookkkkk",
-					"  fuuuk", "  fuka", "  fuckin", "  fucking", "  fookin", "  foocking",
-					"  fooooking", "  fuukin", "  fucin", "  fucin",
-					"  fuuukkin", "  ffuuuuck");
+					"  fuck", "  fucccckkking", "  fuuuuck", "  fookkkkk",
+					"  fuuuk", "  fuka", "  fuck", "  fuck", "  fook",
+					"  foock", "  fooooking", "  fuukin", "  fuc", "  fuuukk",
+					"  ffuuuuck");
 		if (i == 1)
 			a(true, "  shit", "  ssshhit", "  shhhiiiite", "  shite",
 					"  shiiit", "  shhhhhhhiiiiiiit", "  shitty", "  shat",
-					"  shaaaat", "  shart", "  shaaaaart", "  shitting",
-					"  shiiiting");
+					"  shaaaat", "  shart", "  shaaaaart", "  shitt",
+					"  shiiit");
 		if (i == 2)
 			a(true, "  bitch", "  bich", "  bitch", "  btch", "  biiiitch",
 					"  biiiiich", "  biatch", "  biiiaaatch", "  biiiatch",
-					"  bitttttttttch", "  biiiiiiich", "  bicccch",
-					"  bitching");
+					"  bitttttttttch", "  biiiiiiich", "  bicccch", "  bitch");
 		if (i == 3)
 			a(true, "  cunt", "  cuuuuuunt", "  kunt", "  cuuuuuuuunnnt",
 					"  cuuunt", "  kuuuunntttt", "  kunnnnt");
 		if (i == 4)
 			a(true, "  fag", "  faggot", "  fagget", "  feggit", "  figgit",
 					"  faaaaag", "  phagot", "  phaggot", "  phag",
-					"  phaaaaag", "  phaaaget", "  faaaaagggot",
-					"  phegot", "  pheggot");
-		/*
-		 * a(true, "  shit", "  shiit", "  shiiit", "  shiiiit", "  shiiiiit",
-		 * "  shiiiiit", "  shiiiiit", "  shiiiiit", "  fuck", "  fuk", "  fuc",
-		 * "  crap", "  carp", "  fck", "  sht", "  craap", "  bitch", "  btch",
-		 * "  bich", "  phuc", "  phuk", "  fucking", "  fag", "  faggot",
-		 * "  faag", "faaaaaaaaaag", "  fegit", "  fagit", "  phagot",
-		 * "  penis", "  dick", "  diick", "  dic", "  dik", "  diik", "  diic",
-		 * "  ass", "motherfucker", "fuckyou", "fucyou", "fucu", "fuku",
-		 * "fukyou", "isshit", "fuckingdumb", "gadick", "eadick", "shitty",
-		 * "stupid", "  stupid", "anass", "eaass", "hefuckdidyou", "leshit",
-		 * "lebitch", "nakillyou", "myfucking", "fuckout", "fuckoff", "atshit",
-		 * "fucker", "oufucker", "  fucker", "fucccckkking", "veshit", "idiot",
-		 * "  idiot", " idiot", "anidiot", "  jerk", "vesht", "fuuuuck",
-		 * "ffffuuuuck", "fuuuk", "hitler", "nigger", "niger", "nagger",
-		 * "neegger", "negger", "  negger", "  nigger", " nazi", " jew",
-		 * "  cunt", "  cuunt", "  cock", "  cuck", "  cok", "  coc", "  cuc",
-		 * "  cuk", "  figgit", "  jews", "  siegheil", "muthafuka", "fuka",
-		 * "craaaaap", "diiiiiiiiick", "cooooock", "faaaaagggooott",
-		 * "faggggggggooot", "faaaaaaagoot", "ccuuuuuuuunt", "ccccuuunnnnnnt",
-		 * "cucucucucunt", "fuuuuuuuuu", "siegheil", "fuckin", "  fucking",
-		 * " fookin", " fooking", "fooking", " shitting", " shittin",
-		 * "  fuukin", "  fucin", "fucin", "crappin", "crapin", "  crappin",
-		 * " dickin", "  dicken", "  penis", "  ccooockin", "  fuuukkin",
-		 * "deathtojews", "deathtoamerica", "gokillyourself", "killyourself",
-		 * "diefaggot", "heilhitler", "  cancer", "cancer", "  ffuuuuck",
-		 * "  cunt");
-		 */
-		// Leave two spaces for beginnings of sentances.
+					"  phaaaaag", "  phaaaget", "  faaaaagggot", "  phegot",
+					"  pheggot");
+		
+		// Leave two spaces for beginnings of sentences. Two spaces are done so things like "Mass" does not get flagged as "Ass" simply because it does not see the letter before.
 
 		// clean
 		a(false, " mass", "mass", "  mass", "the", "world", "some", "so",
@@ -210,37 +214,44 @@ public class SwearBot extends NNBaseEntity implements Controler {
 				"  shifting", "  are", "  you", "  is", "jerky", "snowglobe",
 				"canoue", "  vote", "  meat", " meet", "  idk", "  taxi",
 				" booya", " bomb", "dictionairy", "coolio", " normal",
-				"  words", "  it", " can", " be", "anything", "greatgamegg",
-				"anything", " anything", "  aything", " that", " the",
-				" reader", " would", " read", " cool", " heywantto", "coming",
-				"following", "climbing", "flagging", "masking", "creating",
-				"flinging", "shining", "  shining", "gliding", "swimming",
-				"swarming", "shunning", "grappling", "sappling",
-				"tradeforsome", "diamonds", "gold", "emerald", "do", " do",
-				"  do", "  iron", "  mass", "mass", " mass", " geoff",
-				"somerandom", "lengthofstring", "forsomething", "op", "opis",
-				"anythingelseyou", "wouldliketo", "add", "subtract",
-				"wordassociation", "mispelword", "kik", "kek", "lol", "  lol",
-				" lol", "goodjob", "Accordingtoall", "knownlawsofaviation",
-				"thereisnowayabee", "shouldbeable", "toflyits", "wingsaretoo",
-				"smalltogetits", "fatlittlebodyoff", "thegroundThe",
-				"beeofcourse", "fliesanyway", "becausebeesdont", "can",
-				"  can", "  who", "  bythepower", " ofgrayskull", " zombie",
-				" mummy", " mommy", "  daddy", "  kiddo", "  kid",
-				"meetatspawn", "somebody", "oncetoldme", "theworldis",
-				"nevergonna", "giveyouup", "nevergonna", "letyoudown",
-				"nevergonnarunaround", "anddesertyou", "takeabow",
-				"carewhathumansthink", "isimpossibleYellow",
+				"continue", "shihtzu", "zen", "zone", "  shihtzu", "zoo",
+				"zoom", "picklerick", "  words", "  it", " can", " be",
+				"anything", "greatgamegg", "anything", " anything",
+				"  aything", " that", " the", " reader", " would", " read",
+				" cool", " heywantto", "coming", "following", "climbing",
+				"flagging", "masking", "creating", "flinging", "shining",
+				"  shining", "gliding", "swimming", "swarming", "shunning",
+				"grappling", "sappling", "tradeforsome", "diamonds", "gold",
+				"emerald", "do", " do", "  do", "  iron", "  mass", "mass",
+				" mass", " geoff", "somerandom", "lengthofstring",
+				"forsomething", "op", "opis", "anythingelseyou", "wouldliketo",
+				"add", "subtract", "wordassociation", "mispelword", "kik",
+				"kek", "lol", "  lol", " lol", "goodjob", "Accordingtoall",
+				"knownlawsofaviation", "thereisnowayabee", "shouldbeable",
+				"toflyits", "wingsaretoo", "smalltogetits", "fatlittlebodyoff",
+				"thegroundThe", "beeofcourse", "fliesanyway",
+				"becausebeesdont", "can", "  can", "  who", "  bythepower",
+				" ofgrayskull", " zombie", " mummy", " mommy", "  daddy",
+				"  kiddo", "  kid", "thatsright", "atright", "hatsright",
+				"right", "sright", "meetatspawn", "somebody", "oncetoldme",
+				"theworldis", "bacon", "  bacon", "biscut", "  biscut",
+				" biscut", "totalbiscut", "abiscut", "country", "county",
+				"community", "poppop", "nevergonna", "giveyouup", "nevergonna",
+				"letyoudown", "nevergonnarunaround", "anddesertyou",
+				"takeabow", "carewhathumansthink", "isimpossibleYellow",
 				"blackYellowblack", "YellowblackYellow", "blackOoh",
 				"blackandyellow", "letsshakeitupalittle", "ifweeverwanted",
 				"toachieveinterestaller", "travelsomething",
 				"somethingorother", "justsomeothertext", "moretextandstuff",
-				"thangs", "maybetheNNisoff", "weneedmoretesting", "morestuff",
-				"zebealo", "weeboasf", "forefsase", "dsfawdsddg",
-				"dsafGASGDSAG", "stuifas", "testxrtwats", "period", "  wirds",
-				"wereecsf", "zzzzdgfwasf", "mooooos", "thecowgoesmpoo",
-				"dogswoof", "catsmoew", "cwomoo", "moretext", "swearsstuff",
-				"hullo", "halo", "wynncraft", "mineplex", "spigot", "bukkit",
+				"duck", "ducking", "fudge", "fudging", "  ducking", " ducking",
+				" shipping", "shipping", "  shipping", " sharp", "cup",
+				"  cup", "chip", "  chip", "caesar", "thangs",
+				"maybetheNNisoff", "weneedmoretesting", "morestuff", "zebealo",
+				"weeboasf", "forefsase", "dsfawdsddg", "dsafGASGDSAG",
+				"stuifas", "testxrtwats", "period", "  wirds", "wereecsf",
+				"zzzzdgfwasf", "mooooos", "thecowgoesmpoo", "dogswoof",
+				"catsmoew", "cwomoo", "moretext", "swearsstuff", "hullo",
+				"halo", "wynncraft", "mineplex", "spigot", "bukkit",
 				"theshotbownetwork", "network", "hivemc",
 				"thisisanexampletext", "sampletext", "gateeem", "lolwat",
 				"cooliokid", "Zombie_Striker", "Zombie", "Skeleton", "creeper",

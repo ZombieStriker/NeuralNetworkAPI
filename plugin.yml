@@ -1,0 +1,8 @@
+main: me.zombie_striker.nnmain.Main
+version: 1.0.0
+name: NeuralNetworkAPI
+commands:
+   nn:
+      description: Test the network
+author:
+   Zombie_Striker

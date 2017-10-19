@@ -1,5 +1,22 @@
 package me.zombie_striker.neuralnetwork;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,9 +38,6 @@ public class NeuralNetwork {
 
 	private boolean Asyncrunning = false;
 
-	@SuppressWarnings("rawtypes")
-	private static List<Class> registeredBaseClasses = new ArrayList<>();
-
 	private boolean broadcastMessage = true;
 
 	public NeuralNetwork(final Plugin mainClass) {
@@ -34,45 +48,24 @@ public class NeuralNetwork {
 					if (messages.size() > 0) {
 						List<String> s = new ArrayList<>(messages);
 						messages.clear();
-						if(s.size() > 5){
+						if (s.size() > 5) {
 							Bukkit.getConsoleSender().sendMessage(s.get(0));
 							Bukkit.getConsoleSender().sendMessage(s.get(1));
 							Bukkit.getConsoleSender().sendMessage(s.get(2));
-							Bukkit.getConsoleSender().sendMessage(s.size()+" more...");
-						}else{
-						for (String ss : s) {
-							if (ss != null)
-								Bukkit.getConsoleSender().sendMessage(ss);
-						}
+							Bukkit.getConsoleSender().sendMessage(
+									s.size() + " more...");
+						} else {
+							for (String ss : s) {
+								if (ss != null)
+									Bukkit.getConsoleSender().sendMessage(ss);
+							}
 						}
 					}
-				}else{
+				} else {
 					messages.clear();
 				}
 			}
 		}.runTaskTimer(mainClass, 1, 20);
-	}
-
-	public static void registerBaseEntity(NNBaseEntity base) {
-		registeredBaseClasses.add(base.getClass());
-	}
-
-	public static void registerBaseEntity(Class<?> base) {
-		registeredBaseClasses.add(base);
-	}
-
-	@SuppressWarnings("rawtypes")
-	public static List<Class> getRegisteredBaseEntityClasses() {
-		return new ArrayList<>(registeredBaseClasses);
-	}
-
-	/**
-	 * SHOULD NOT BE USED BY OTHER PLUGINS.
-	 */
-	@Deprecated
-	public static void clearAllRegisteredClasses() {
-		registeredBaseClasses.clear();
-		registeredBaseClasses = null;
 	}
 
 	/**
@@ -118,28 +111,32 @@ public class NeuralNetwork {
 	}
 
 	/**
-	 * Starts training the neural network. Note that this NN should not make any calls to Bukkit while training.
+	 * Starts training the neural network. Note that this NN should not make any
+	 * calls to Bukkit while training.
 	 */
-	public void startLearningAsynchronously(){
+	public void startLearningAsynchronously() {
 		getCurrentNeuralNetwork().setShouldLearn(true);
 		startAsynchronously();
 	}
 
 	/**
-	 * Starts training the neural network. Note that this this is slower than Async learning and may cause some lag on the server.
+	 * Starts training the neural network. Note that this this is slower than
+	 * Async learning and may cause some lag on the server.
 	 */
-	public void startLearningSynchronously(){
+	public void startLearningSynchronously() {
 		getCurrentNeuralNetwork().setShouldLearn(true);
 		start();
 	}
+
 	/**
-	 * Starts training the neural network. Note that this NN should not make any calls to Bukkit while training.
+	 * Starts training the neural network. Note that this NN should not make any
+	 * calls to Bukkit while training.
 	 */
-	public void stopLearning(){
+	public void stopLearning() {
 		stop();
 		getCurrentNeuralNetwork().setShouldLearn(false);
 	}
-	
+
 	/**
 	 * Starts an *Asynchronously* BukkitRunnable that will update the control
 	 * every tick. Should be used for training the NN with data not a part of
@@ -165,7 +162,7 @@ public class NeuralNetwork {
 	 * Stops the BukkitRunnable.
 	 */
 	public void stop() {
-		Asyncrunning=false;
+		Asyncrunning = false;
 		if (runnable != null) {
 			this.runnable.cancel();
 			this.runnable = null;

@@ -7,6 +7,11 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class QuickBlackJackHandler {
 
+	/**
+	 * This is  a small class for handling the decks. You don't really need to see this to understand what is happening.
+	 */
+	
+	
 	public Card[] cardsInDeck = new Card[52];
 	public int currentIndex = 0;
 	

@@ -1,5 +1,22 @@
 package example.bot_guesser;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.HashMap;
 
 import org.bukkit.ChatColor;
@@ -9,15 +26,19 @@ import me.zombie_striker.neuralnetwork.*;
 import me.zombie_striker.neuralnetwork.neurons.*;
 import me.zombie_striker.neuralnetwork.neurons.input.InputLetterNeuron;
 import me.zombie_striker.neuralnetwork.senses.Sensory2D_Letters;
-import me.zombie_striker.neuralnetwork.util.DeepReinformentUtil;
+import me.zombie_striker.neuralnetwork.util.DeepReinforcementUtil;
 
+public class BotGuesser extends NNBaseEntity implements Controler {
 
-public class BotGuesser extends NNBaseEntity implements Controler{
+	/**
+	 * This bot checks to see if a user name is a "real account" based on its
+	 * username. Gibberish or random usernames will return false.
+	 */
 
-
-	public static char[] letters = {'A','B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
-			'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0',
-			'1', '2', '3', '4', '5', '6', '7', '8', '9', '_' };
+	public static char[] letters = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+			'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
+			'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7',
+			'8', '9', '_' };
 
 	public Sensory2D_Letters word = new Sensory2D_Letters("none");
 
@@ -27,101 +48,99 @@ public class BotGuesser extends NNBaseEntity implements Controler{
 
 	public HashMap<String, Boolean> ifNameIsValid = new HashMap<>();
 
-	
 	public BotGuesser(boolean createAI) {
 		super(false);
 		this.base = this;
 		initValidNames();
 
-		//this.senses.add(word);
-		
 		if (createAI) {
-			//Generates an ai with ONE output, which is equal to whether it is a player
-			this.ai = NNAI.generateAI(this, 1,3,"Is a real player");
+			// Generates an ai with ONE output, which is equal to whether it is
+			// a player
+			this.ai = NNAI.generateAI(this, 1, 4, "Is a real player");
 
 			for (int index = 0; index < 16; index++) {
 				for (int character = 0; character < letters.length; character++) {
 					// 1st one is what index, the next is the actual character
 					InputLetterNeuron.generateNeuronStatically(ai, index,
-							letters[character],this.word);
+							letters[character], this.word);
 				}
 			}
-			//Creates the neurons for layer 1.
-			for (int neurons = 0; neurons < 28; neurons++) {
+			// Creates the neurons for layer 1.
+			for (int neurons = 0; neurons < 30; neurons++)
 				Neuron.generateNeuronStatically(ai, 1);
-			}
+			// Create neurons for layer 2
+			for (int neurons = 0; neurons < 20; neurons++)
+				Neuron.generateNeuronStatically(ai, 2);
+
 			BiasNeuron.generateNeuronStatically(ai, 0);
 			BiasNeuron.generateNeuronStatically(ai, 1);
 
 			connectNeurons();
 		}
 		this.controler = this;
-		
-		this.setNeuronsPerRow(0,letters.length);
+
+		this.setNeuronsPerRow(0, letters.length);
 	}
 
 	@Override
 	public String update() {
+		/**
+		 * 1) If it should learn, select a random entry from the map. Based on
+		 * the way we propogate the map, it has a 50% chance of being a valid
+		 * name.
+		 * 
+		 * 2) Tick and think.
+		 * 
+		 * 3) If it is not learning, return if it was correct, the word used,
+		 * and its "score".
+		 * 
+		 * 4) else, check if the name was a real name, and compare if the NN
+		 * gave the same answer
+		 * 
+		 * 5) if it did not, improve it.
+		 */
 		if (shouldLearn) {
 			this.word
 					.changeWord((String) ifNameIsValid.keySet().toArray()[(int) ((ifNameIsValid
 							.keySet().size() - 1) * Math.random())]);
 		}
-		base.ai.tick();
-		boolean result = base.ai.think()[0];
+		boolean result = tickAndThink()[0];
 
-		boolean ishuman = false;
-		float accuracy = 0;
-		if (shouldLearn) {
-			ishuman = ifNameIsValid.get(base.word.getWord());
-			this.getAccuracy().addEntry(result == ishuman);
-			accuracy = (float) this.getAccuracy().getAccuracy();
-		}
 		if (!shouldLearn) {
-			return (
-					(result ? ChatColor.DARK_GREEN : ChatColor.DARK_RED)
-							+ "|="
-							+ base.word.getWord()
-							+ "|  "
-							+ result
-							+ "|Human-Score "
-							+ ((int) (100 * (base.ai.getNeuronFromId(0)
-									.getTriggeredStength()))));
+			return ((result ? ChatColor.DARK_GREEN : ChatColor.DARK_RED) + "|="
+					+ base.word.getWord() + "|  " + result + "|Human-Score " + ((int) (100 * (base.ai
+					.getNeuronFromId(0).getTriggeredStength()))));
 
 		} else {
+			boolean ishuman = ifNameIsValid.get(base.word.getWord());
+			this.getAccuracy().addEntry(result == ishuman);
+			float accuracy = (float) this.getAccuracy().getAccuracy();
 			wasCorrect = result == ishuman;
 
 			// IMPROVE IT
 			Neuron[] array = new Neuron[1];
 			if (ishuman)
 				array[0] = base.ai.getNeuronFromId(0);
-			DeepReinformentUtil.instantaneousReinforce(base, array,
+			DeepReinforcementUtil.instantaneousReinforce(base, array,
 					(wasCorrect ? 1 : 3));
-			return(
-					(result == ishuman ? ChatColor.GREEN : ChatColor.RED)
-							+ "acc "
-							+ ((int) (100 * accuracy))
-							+ "|="
-							+ base.word.getWord()
-							+ "|  "
-							+ result
-							+ "|Human-Score "
-							+ ((int) (100 * (base.ai.getNeuronFromId(0)
-									.getTriggeredStength()))));
+			return ((result == ishuman ? ChatColor.GREEN : ChatColor.RED)
+					+ "acc " + ((int) (100 * accuracy)) + "|="
+					+ base.word.getWord() + "|  " + result + "|Human-Score " + ((int) (100 * (base.ai
+					.getNeuronFromId(0).getTriggeredStength()))));
 		}
 	}
 
 	@Override
 	public void setInputs(CommandSender initiator, String[] args) {
 		if (this.shouldLearn) {
-			initiator.sendMessage("Stop the learning before testing. use /nn stoplearning");
+			initiator
+					.sendMessage("Stop the learning before testing. use /nn stoplearning");
 			return;
 		}
 		if (args.length > 1) {
 			String username = args[1];
 
-			this.word
-					.changeWord(username);
+			this.word.changeWord(username);
 			return;
 		} else {
 			initiator.sendMessage("Provide an id");
@@ -129,6 +148,9 @@ public class BotGuesser extends NNBaseEntity implements Controler{
 	}
 
 	private void initValidNames() {
+
+		// This is just a small sample. The more valid names you give it, the
+		// more accurate it will be.
 
 		// Player names
 		a("Zombie_Striker", "kermit_23", "Notch", "xephos", "lividcoffee",
@@ -168,6 +190,7 @@ public class BotGuesser extends NNBaseEntity implements Controler{
 
 		// Bot names (the chance that one of them will be an actual name is too
 		// slim to take into account)
+		// Generates a name from 3 to 16 characters.
 		for (int i = 0; i < ifNameIsValid.size(); i++) {
 			StringBuilder sb = new StringBuilder();
 			int size = (int) (3 + (13 * Math.random()));
@@ -181,11 +204,12 @@ public class BotGuesser extends NNBaseEntity implements Controler{
 
 	@Override
 	public NNBaseEntity clone() {
-		BotGuesser thi = new BotGuesser(false);
-		thi.ai = this.ai;
-		return thi;
+		BotGuesser clone = new BotGuesser(false);
+		clone.ai = this.ai.clone(clone);
+		return clone;
 	}
 
+	// Not needed, since the controler is in the same class as the base.
 	public void setBase(NNBaseEntity t) {
 		this.base = (BotGuesser) t;
 	}

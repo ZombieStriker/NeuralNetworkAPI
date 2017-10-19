@@ -1,5 +1,22 @@
 package me.zombie_striker.nnmain;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -76,43 +93,62 @@ public class Main extends JavaPlugin implements Listener {
 	private File f = new File(getDataFolder(), "NNData.yml");
 
 	/**
-	 * If you are creating your own plugin using the NNAPI, do not use the default NN. You should have your own class.
+	 * If you are creating your own plugin using the NNAPI, do not use the
+	 * default NN. You should have your own class.
 	 */
 	private NeuralNetwork nn;
 
 	protected static Main plugin;
 
-	@SuppressWarnings("deprecation")
 	@Override
 	public void onDisable() {
 		plugin = null;
-		if(getNn()!=null&&getNn().getGrapher()!=null)
-		getNn().closeGrapher();
-		NeuralNetwork.clearAllRegisteredClasses();
+		if (getNn() != null && getNn().getGrapher() != null)
+			getNn().closeGrapher();
+		clearAllRegisteredClasses();
 	}
 
 	@Override
 	public void onEnable() {
-		//TODO: Remove these values. They were only needed back when the NNs did not implement ConfigurationSerializable
-		NeuralNetwork.registerBaseEntity(BlackJackHelper.class);
-		NeuralNetwork.registerBaseEntity(PrimeNumberBot.class);
-		NeuralNetwork.registerBaseEntity(NumberAdder.class);
-		NeuralNetwork.registerBaseEntity(MusicBot.class);
-		NeuralNetwork.registerBaseEntity(BotGuesser.class);
-		NeuralNetwork.registerBaseEntity(SwearBot.class);
-		NeuralNetwork.registerBaseEntity(LogicalInverted.class);
-		NeuralNetwork.registerBaseEntity(LogicalOR.class);
-		NeuralNetwork.registerBaseEntity(LogicalAND.class);
-		NeuralNetwork.registerBaseEntity(LogicalXOR.class);
-		NeuralNetwork.registerBaseEntity(LogicalNAND.class);
-		NeuralNetwork.registerBaseEntity(LogicalNOR.class);
-		NeuralNetwork.registerBaseEntity(LogicalXNOR.class);
-		
-		nn=new NeuralNetwork(this);
+		// TODO: Remove these values. They were only needed back when the NNs
+		// did not implement ConfigurationSerializable
+		registerDemoEntity(BlackJackHelper.class);
+		registerDemoEntity(PrimeNumberBot.class);
+		registerDemoEntity(NumberAdder.class);
+		registerDemoEntity(MusicBot.class);
+		registerDemoEntity(BotGuesser.class);
+		registerDemoEntity(SwearBot.class);
+		registerDemoEntity(LogicalInverted.class);
+		registerDemoEntity(LogicalOR.class);
+		registerDemoEntity(LogicalAND.class);
+		registerDemoEntity(LogicalXOR.class);
+		registerDemoEntity(LogicalNAND.class);
+		registerDemoEntity(LogicalNOR.class);
+		registerDemoEntity(LogicalXNOR.class);
+
+		nn = new NeuralNetwork(this);
 		plugin = this;
 
 		config = YamlConfiguration.loadConfiguration(f);
-		Bukkit.getPluginManager().registerEvents(new ExampleSwearListener(getNn()), this);
+		Bukkit.getPluginManager().registerEvents(
+				new ExampleSwearListener(getNn()), this);
+
+		new Updater(this, 280241);
+		/**
+		 * Everyone should want the most up to date version of the plugin, so
+		 * any improvements made (either with performance or through new
+		 * methods) should be welcome. Since it is rare that I will remove
+		 * anything, and even if I did, I would deprecate the methods for a long
+		 * period of time before I do, nothing should really break.
+		 */
+
+		Metrics metrics = new Metrics(this);
+		/**
+		 * I use bStats metrics to monitor how many servers are using my API.
+		 * This does not send any personal/private information (this only sends
+		 * the server version, Java version, the plugin's version, and system
+		 * architecture)
+		 */
 	}
 
 	public static Main getMainClass() {
@@ -146,8 +182,7 @@ public class Main extends JavaPlugin implements Listener {
 						"NeuralNetworks").getKeys(false))
 					b(list, args[1], s);
 			} else if (args[0].equalsIgnoreCase("createNewNN")) {
-				for (Class<?> c : NeuralNetwork
-						.getRegisteredBaseEntityClasses()) {
+				for (Class<?> c : getRegisteredDemoEntityClasses()) {
 					b(list, args[1], c.getSimpleName());
 				}
 			}
@@ -170,22 +205,33 @@ public class Main extends JavaPlugin implements Listener {
 			return true;
 		}
 
+		if (!sender.isOp()) {
+			sender.sendMessage("Sorry, only OP players can access demo commands.");
+			return true;
+		}
+
 		if (args[0].equalsIgnoreCase("createNewNN")
 				|| args[0].equalsIgnoreCase("cnn")) {
 			if (args.length < 2) {
 				sender.sendMessage("You must specify which NN you want to create. Choose one of the following:");
-				for (Class<?> c : NeuralNetwork
-						.getRegisteredBaseEntityClasses()) {
+				for (Class<?> c : getRegisteredDemoEntityClasses()) {
 					sender.sendMessage("-" + c.getSimpleName());
 				}
 				return true;
 			}
 			NNBaseEntity base = null;
-			for (Class<?> c : NeuralNetwork.getRegisteredBaseEntityClasses()) {
+			for (Class<?> c : getRegisteredDemoEntityClasses()) {
 				if (args[1].equalsIgnoreCase(c.getSimpleName())) {
 					try {
-						base = (NNBaseEntity) c.getDeclaredConstructor(
-								Boolean.TYPE).newInstance(true);
+						try {
+							base = (NNBaseEntity) c.getDeclaredConstructor(
+									Boolean.TYPE).newInstance(true);
+						} catch (Exception e) {
+							// If it does not have a parameter for boolean
+							// types, use default, empty constructor.
+							base = (NNBaseEntity) c.getDeclaredConstructor()
+									.newInstance(true);
+						}
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
@@ -193,8 +239,7 @@ public class Main extends JavaPlugin implements Listener {
 			}
 			if (base == null) {
 				sender.sendMessage("You need to provide a valid bot type. Choose one of the following.");
-				for (Class<?> c : NeuralNetwork
-						.getRegisteredBaseEntityClasses()) {
+				for (Class<?> c : getRegisteredDemoEntityClasses()) {
 					sender.sendMessage("-" + c.getSimpleName());
 				}
 				return true;
@@ -241,7 +286,8 @@ public class Main extends JavaPlugin implements Listener {
 		}
 
 		if (args[0].equalsIgnoreCase("test")) {
-			getNn().getCurrentNeuralNetwork().getControler().setInputs(sender, args);
+			getNn().getCurrentNeuralNetwork().getControler()
+					.setInputs(sender, args);
 			sender.sendMessage(getNn().triggerOnce());
 			return true;
 		}
@@ -296,6 +342,40 @@ public class Main extends JavaPlugin implements Listener {
 
 	private NeuralNetwork getNn() {
 		return nn;
+	}
+
+	private static List<Class<? extends NNBaseEntity>> registeredDemoClasses = new ArrayList<>();
+
+	/**
+	 * THIS SHOULD ONLY BE USED BY OTHER PLUGINS IF YOU WANT TO TEST IT IN THE
+	 * DEMO MODE
+	 */
+	public static void registerDemeEntity(NNBaseEntity base) {
+		registeredDemoClasses.add(base.getClass());
+	}
+
+	/**
+	 * THIS SHOULD ONLY BE USED BY OTHER PLUGINS IF YOU WANT TO TEST IT IN THE
+	 * DEMO MODE
+	 */
+	public static void registerDemoEntity(Class<? extends NNBaseEntity> base) {
+		registeredDemoClasses.add(base);
+	}
+
+	/**
+	 * SHOULD NOT BE USED BY OTHER PLUGINS.
+	 */
+	public static List<Class<? extends NNBaseEntity>> getRegisteredDemoEntityClasses() {
+		return new ArrayList<>(registeredDemoClasses);
+	}
+
+	/**
+	 * SHOULD NOT BE USED BY OTHER PLUGINS.
+	 */
+	@Deprecated
+	public static void clearAllRegisteredClasses() {
+		registeredDemoClasses.clear();
+		registeredDemoClasses = null;
 	}
 
 }

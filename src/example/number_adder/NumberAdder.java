@@ -1,5 +1,22 @@
 package example.number_adder;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.HashMap;
 
 import org.bukkit.Bukkit;
@@ -10,7 +27,7 @@ import me.zombie_striker.neuralnetwork.*;
 import me.zombie_striker.neuralnetwork.neurons.*;
 import me.zombie_striker.neuralnetwork.neurons.input.InputBooleanNeuron;
 import me.zombie_striker.neuralnetwork.senses.Sensory2D_Booleans;
-import me.zombie_striker.neuralnetwork.util.DeepReinformentUtil;
+import me.zombie_striker.neuralnetwork.util.DeepReinforcementUtil;
 
 public class NumberAdder extends NNBaseEntity implements Controler {
 
@@ -24,7 +41,7 @@ public class NumberAdder extends NNBaseEntity implements Controler {
 		base = this;
 
 		if (createAI) {
-			this.ai = NNAI.generateAI(this, max_bytes + 1, 3, "1", "2", "4",
+			this.ai = NNAI.generateAI(this, max_bytes + 1, 4, "1", "2", "4",
 					"8", "16", "32", "64", "128", "256", "512", "1024");
 
 			for (int trueOrFalse = 0; trueOrFalse < 4; trueOrFalse++) {
@@ -34,8 +51,11 @@ public class NumberAdder extends NNBaseEntity implements Controler {
 				}
 			}
 
-			for (int neurons = 0; neurons < 30; neurons++) {
+			for (int neurons = 0; neurons < 50; neurons++) {
 				Neuron.generateNeuronStatically(ai, 1);
+			}
+			for (int neurons = 0; neurons < 40; neurons++) {
+				Neuron.generateNeuronStatically(ai, 2);
 			}
 			BiasNeuron.generateNeuronStatically(ai, 0);
 			BiasNeuron.generateNeuronStatically(ai, 1);
@@ -118,7 +138,7 @@ public class NumberAdder extends NNBaseEntity implements Controler {
 
 			// amountOfMistakes = (int) Math.pow(2,amountOfMistakes);
 			if (!result)
-				DeepReinformentUtil.instantaneousReinforce(base, map,
+				DeepReinforcementUtil.instantaneousReinforce(base, map,
 						amountOfMistakes);
 			return ((result ? ChatColor.GREEN : ChatColor.RED) + "acc "
 					+ getAccuracy().getAccuracyAsInt() + "|" + number + " + "

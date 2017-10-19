@@ -1,5 +1,22 @@
 package me.zombie_striker.neuralnetwork;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -28,6 +45,13 @@ public class NNBaseEntity implements ConfigurationSerializable {
 	public NNBaseEntity(boolean createAI) {
 		if (createAI)
 			ai = new NNAI(this);
+		accuracy = new Accuracy(500);
+	}
+
+	public NNBaseEntity(boolean createAI, int accuracyCheck) {
+		if (createAI)
+			ai = new NNAI(this);
+		accuracy = new Accuracy(accuracyCheck);
 	}
 
 	public void connectNeurons() {
@@ -45,6 +69,17 @@ public class NNBaseEntity implements ConfigurationSerializable {
 				}
 			}
 		}
+	}
+	public void randomizeNeurons(){
+		for (Neuron n : ai.getAllNeurons()) {
+			if (ai.MAX_LAYERS > n.layer + 1) {
+				n.setWeight((Math.random()*2)-1);
+				n.setThreshold((Math.random()*2)-1);
+				for (Neuron output : ai.getNeuronsInLayer(n.layer + 1)) {
+					n.setStrengthForNeuron(output, (Math.random()*2)-1);
+				}
+			}
+		}		
 	}
 	
 	public boolean[] tickAndThink(){

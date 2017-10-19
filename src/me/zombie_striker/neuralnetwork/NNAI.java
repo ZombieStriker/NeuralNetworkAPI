@@ -1,5 +1,22 @@
 package me.zombie_striker.neuralnetwork;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.*;
 
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
@@ -20,30 +37,6 @@ public class NNAI implements ConfigurationSerializable {
 	private int currentTick = -1;
 	public int MAX_LAYERS = -1;
 
-	public int getCurrentTick() {
-		return currentTick;
-	}
-
-	public void setCurrentTick(int i) {
-		currentTick = i;
-	}
-
-	public int generateNeuronId() {
-		return currentNeuronId++;
-	}
-
-	public int getNewestId() {
-		return currentNeuronId;
-	}
-
-	public ArrayList<Neuron> getNeuronsInLayer(int layer) {
-		return layers.get(layer).neuronsInLayer;
-	}
-
-	public ArrayList<Neuron> getOutputNeurons() {
-		return getNeuronsInLayer(layers.size() - 1);
-	}
-
 	public NNAI(NNBaseEntity nnEntityBase) {
 		this(nnEntityBase, 3);
 	}
@@ -61,17 +54,10 @@ public class NNAI implements ConfigurationSerializable {
 		}
 	}
 
-	public void setNeuronsPerRow(int row, int amount) {
-		this.getLayer(row).setNeuronsPerRow(amount);
-	}
-
-	public int getNeuronsPerRow(int row) {
-		return this.getLayer(row).getNeuronsPerRow();
-	}
-
 	public NNAI(NNBaseEntity e, int id, boolean addToTotal) {
 		this(e, id, addToTotal, 3);
 	}
+	
 
 	public NNAI(NNBaseEntity e, int id, boolean addToTotal, int layers_amount) {
 		this.id = id;
@@ -87,6 +73,13 @@ public class NNAI implements ConfigurationSerializable {
 		}
 	}
 
+	public void setNeuronsPerRow(int row, int amount) {
+		this.getLayer(row).setNeuronsPerRow(amount);
+	}
+
+	public int getNeuronsPerRow(int row) {
+		return this.getLayer(row).getNeuronsPerRow();
+	}
 	public Neuron getNeuronFromId(Integer n) {
 		return allNeurons.get(n);
 	}
@@ -121,6 +114,26 @@ public class NNAI implements ConfigurationSerializable {
 		return ai;
 	}
 
+	public boolean[] think() {
+		this.tick();
+		boolean[] points = new boolean[getOutputNeurons().size()];
+		for (Neuron n : getOutputNeurons()) {
+			if (n.isTriggered()) {
+				if (n instanceof OutputNeuron)
+					points[((OutputNeuron) n).responceid] = true;
+			}
+		}
+		return points;
+	}
+	
+	public NNAI clone(NNBaseEntity base){
+		NNAI ai = new NNAI(base,MAX_LAYERS);
+		for(int i = 0; i < allNeurons.size();i++){
+			allNeurons.get(i).generateNeuron(ai);
+		}
+		return ai;
+	}
+
 	public void tick() {
 		currentTick++;
 	}
@@ -136,19 +149,6 @@ public class NNAI implements ConfigurationSerializable {
 	public List<Neuron> getInputNeurons() {
 		return layers.get(0).neuronsInLayer;
 	}
-
-	public boolean[] think() {
-		this.tick();
-		boolean[] points = new boolean[getOutputNeurons().size()];
-		for (Neuron n : getOutputNeurons()) {
-			if (n.isTriggered()) {
-				if (n instanceof OutputNeuron)
-					points[((OutputNeuron) n).responceid] = true;
-			}
-		}
-		return points;
-	}
-
 	public List<Neuron> getAllNeurons() {
 		return new ArrayList<Neuron>(allNeurons.values());
 	}
@@ -157,6 +157,30 @@ public class NNAI implements ConfigurationSerializable {
 		this.allNeurons.put(n.getID(), n);
 	}
 
+	
+	public int getCurrentTick() {
+		return currentTick;
+	}
+
+	public void setCurrentTick(int i) {
+		currentTick = i;
+	}
+
+	public int generateNeuronId() {
+		return currentNeuronId++;
+	}
+
+	public int getNewestId() {
+		return currentNeuronId;
+	}
+
+	public ArrayList<Neuron> getNeuronsInLayer(int layer) {
+		return layers.get(layer).neuronsInLayer;
+	}
+
+	public ArrayList<Neuron> getOutputNeurons() {
+		return getNeuronsInLayer(layers.size() - 1);
+	}
 	@SuppressWarnings("unchecked")
 	public NNAI(Map<String, Object> map) {
 		this.layers = (List<Layer>) map.get("l");

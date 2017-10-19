@@ -1,5 +1,22 @@
 package me.zombie_striker.neuralnetwork.neurons;
 
+/**
+ Copyright (C) 2017  Zombie_Striker
+
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ **/
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -23,6 +40,8 @@ public class Neuron implements ConfigurationSerializable {
 	private HashMap<Integer, Double> outputStength = new HashMap<>();
 	private double weight = 0.5;
 	private double threshold = -0.5;
+	
+	private double inheritBias = 0;
 
 	/**
 	 * This is a shortcut for myself. Instead of having to loop through all the
@@ -92,7 +111,7 @@ public class Neuron implements ConfigurationSerializable {
 			}
 		}
 		tickUpdated = ai.getCurrentTick();
-		return lastResult = (SigmoidUtil.sigmoidNumber(signal) * 2) - 1;
+		return lastResult = (SigmoidUtil.sigmoidNumber(signal+inheritBias) * 2) - 1;
 	}
 
 	public void forceTriggerUpdateTree() {
@@ -136,6 +155,12 @@ public class Neuron implements ConfigurationSerializable {
 
 	public double getThreshold() {
 		return threshold;
+	}
+	public double getBias(){
+		return inheritBias;
+	}
+	public void setBias(double bias){
+		this.inheritBias = bias;
 	}
 
 	public void setThreshold(double t) {

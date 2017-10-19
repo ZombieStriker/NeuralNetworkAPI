@@ -32,11 +32,17 @@ There are a few things that you should know before attempting to make a new Neur
 * For best results, only call `DeepReinformentUtil.instantaneousReinforce` when the NN failed in any way. Calling it when it returned the correct value tends to make it "forget" what it may have already learned.
 * This API is still in development. Some aspects of this plugin may change in future updates. Continually to check the github page for updates and make sure your project always references the newest version.
 * When traing your NeuralNetwork, if you do not want the console to fill up with debug messages, use `NeuralNetwork#setBroadcasting(false);` to disable console debugging.
-* If your AI is not return the values you expect, or want to know what your NN is "thinking" given an input, you can open the grapher to have a visualisation of what is happening. use `NeuralNetwork#openGrapher();` to open the grapher instance. Once you are done, you can use `NeuralNetwork#closeGrapher();` to propperly shut it down.
+* If your AI is not return the values you expect, or want to know what your NN is "thinking" given an input, you can open the grapher to have a visualisation of what is happening. Use `NeuralNetwork#openGrapher();` to open the grapher instance. Once you are done, you can use `NeuralNetwork#closeGrapher();` to propperly shut down the window.
+* Adding more hidden layers to your neural network increases the complexity of patterns that it can learn.
+* In certain cases, having a BiasNeuron can increase or decrease the ability for the network to learn. For situations where certain outputs are needed if there are no inputs (XNOR,NAND, Inverted, for example), then it is better to have atleast 1 bias neuron in the inputs.
+* Having BiasNeurons on the hidden layers may or may not help with certain situations. 
 
 
-###How this works
+### How this works
 NeuralNetworks start with three basic components, a Sensory array, an AI object, and a Controler object.
 * The Sensory array determins the inputs. This could be booleans, representing a true or false value, or numbers which represent possible states the for the input.
 * The AI is what converts the inputs into outputs. Through a series of neurons, each with their own values and thresholds, the information is passed from the input into outputs based on how the NN has been trained.
 * The Controler is how you convert the outputs into data that you can use. For example, the controler can convert the outputs into a boolean, determining if the AI detected a swear word for a swear filter, or determining the sum of two integers.
+
+#### GithubPage:
+https://github.com/ZombieStriker/NeuralNetworkAPI
