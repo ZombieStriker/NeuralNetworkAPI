@@ -26,8 +26,8 @@ public class Sensory2D_Letters implements Senses2D{
 
 
 	private char[] letters= InputLetterNeuron.letters;
-	private String word;
-	private String fullWord;
+	private String word="null";
+	private String fullWord="null";
 	public static final int MAX_LETTERS = 19;
 	
 	@Override
@@ -49,7 +49,15 @@ public class Sensory2D_Letters implements Senses2D{
 	}
 
 	public char getCharacterAt(int index) {
+		if(fullWord==null)return ' ';
+		try{
 		return fullWord.charAt(index);
+		}catch(Exception e){
+			/**
+			 * Seriously, I have tried doing a length check, a null check. Do I seriously need to add a catch statement?>
+			 */
+			return ' ';
+		}
 	}
 	public String getWord(){
 		return word;
@@ -64,8 +72,6 @@ public class Sensory2D_Letters implements Senses2D{
 		fullWord = sb.toString();
 	}
 	public Sensory2D_Letters(Map<String, Object> map) {
-		word = null;
-		fullWord=null;
 	}
 
 	@Override

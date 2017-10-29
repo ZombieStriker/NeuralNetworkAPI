@@ -17,6 +17,8 @@ package me.zombie_striker.neuralnetwork.neurons.input;
  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  **/
 
+import java.util.Map;
+
 import me.zombie_striker.neuralnetwork.NNAI;
 import me.zombie_striker.neuralnetwork.senses.*;
 
@@ -27,6 +29,10 @@ public class InputNumberNeuron extends InputNeuron {
 		this.s = sl;
 	}
 
+	public InputNumberNeuron(Map<String,Object> map) {
+		super(map);
+	}
+	
 	public InputNumberNeuron(NNAI ai, int row, int col,
 			Sensory2D_Numbers sl) {
 		super(ai, row, col,sl);

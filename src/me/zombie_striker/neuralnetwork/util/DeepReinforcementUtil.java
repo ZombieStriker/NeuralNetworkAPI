@@ -40,6 +40,28 @@ public class DeepReinforcementUtil {
 	 */
 	public static void instantaneousReinforce(NNBaseEntity base,
 			Neuron[] neuronsThatShouldBeTrue, int repetitions) {
+		instantaneousReinforce(base, neuronsThatShouldBeTrue, repetitions, 0);
+	}
+
+	/**
+	 * Teaches the NN for an instantaneous, constant answer regarding a single
+	 * response. Useful for true-false situations
+	 * 
+	 * @param Base
+	 *            The NeuralEntity
+	 * @param neuronsThatShouldBeTrue
+	 *            Array of all neuons that should be equal to 1. The rest will
+	 *            try to be decreased to -1;
+	 * @param repetitions
+	 *            the amount of repetitions for the training.
+	 * @param chanceForSkip
+	 *            The chance that a neuron will be skipped. This is done to make
+	 *            sure neurons are not over specialized for each time the NN is
+	 *            reinforced.
+	 */
+	public static void instantaneousReinforce(NNBaseEntity base,
+			Neuron[] neuronsThatShouldBeTrue, int repetitions,
+			double chanceForSkip) {
 		HashMap<Neuron, Double> h = new HashMap<>();
 		for (Neuron n : base.ai.getOutputNeurons()) {
 			boolean isRightNeuron = false;
@@ -51,7 +73,7 @@ public class DeepReinforcementUtil {
 			}
 			h.put(n, isRightNeuron ? 1.0 : -1.0);
 		}
-		instantaneousReinforce(base, h, repetitions);
+		instantaneousReinforce(base, h, repetitions, chanceForSkip);
 	}
 
 	/**
@@ -68,72 +90,93 @@ public class DeepReinforcementUtil {
 	 */
 	public static void instantaneousReinforce(NNBaseEntity base,
 			HashMap<Neuron, Double> correctValues, int repetitions) {
+		instantaneousReinforce(base, correctValues, repetitions, 0);
+	}
+
+	/**
+	 * Teaches the NN for an instantaneous, constant answer regarding a single
+	 * response. Useful for true-false situations
+	 * 
+	 * @param Base
+	 *            the NeuralEntity
+	 * @param correctValues
+	 *            a Hashmap of all neurons and the values they should be equal
+	 *            to
+	 * @param repetitions
+	 *            the amount of repetitions for the training.
+	 * @param chanceForSkip
+	 *            The chance that a neuron will be skipped. This is done to make
+	 *            sure neurons are not over specialized for each time the NN is
+	 *            reinforced.
+	 * 
+	 */
+	public static void instantaneousReinforce(NNBaseEntity base,
+			HashMap<Neuron, Double> correctValues, int repetitions,
+			double chanceForSkip) {
 		final double step = 0.01;
 
 		for (int loops = 0; loops < repetitions; loops++) {
 			HashMap<Neuron, Double> suggestedValueForNeuron = correctValues;
 			// Subtract -1 a second time to not get the outputs
-			//for (int layer = base.ai.MAX_LAYERS - 1 - 1; layer >= 0; layer--) {
-			for (int layer = 0;layer <base.ai.MAX_LAYERS - 1 ; layer++) {
+			// for (int layer = base.ai.MAX_LAYERS - 1 - 1; layer >= 0; layer--)
+			// {
+			for (int layer = 0; layer < base.ai.MAX_LAYERS - 1; layer++) {
+				HashMap<Neuron, Double> lastOutputs = new HashMap<Neuron, Double>();
+				// Since no new outputs are created, nor are any destroyed, we
+				// do not need to clear it: simply adding new values will
+				// override the existing vals.
 				for (Neuron n : base.ai.getNeuronsInLayer(layer)) {
-					
-					
-					//Do thresh checks before if is not triggerred
+					if (Math.random() < chanceForSkip)
+						continue;
+
+					// Do thresh checks before if is not triggered
 
 					// Do thresholds after everything else
 					if (!n.isTriggered()) {
 						double orgThr = n.getThreshold();
-						HashMap<Neuron, Double> currentValsThre = new HashMap<>();
-						for (Neuron outputs : suggestedValueForNeuron.keySet()) {
-							currentValsThre.put(outputs,
+						for (Neuron outputs : suggestedValueForNeuron.keySet())
+							lastOutputs.put(outputs,
 									outputs.getTriggeredStength());
-						}
-						
-						if (!(n instanceof InputNeuron))
-							if (n.getTriggeredStength() <= n.getThreshold()) {
-								n.setThreshold(-2);
-								n.forceTriggerUpdateTree();
-								double shouldLowerVal = 0;
-								for (Entry<Neuron, Double> c : currentValsThre
-										.entrySet()) {
-									double sug = suggestedValueForNeuron.get(c
-											.getKey());
-									shouldLowerVal += (Math.abs(c.getValue()
-											- sug) - Math.abs(c.getKey()
-											.getTriggeredStength() - sug));
-								}
-								n.setThreshold(orgThr);
-								if (shouldLowerVal > 0) {
-									n.setThreshold(removeExtremes(n.getThreshold() - step));
-								}
+
+						if (!(n instanceof InputNeuron)
+								&& n.getTriggeredStength() <= n.getThreshold()) {
+							n.setThreshold(-2);
+							n.forceTriggerUpdateTree();
+							double shouldLowerVal = 0;
+							for (Entry<Neuron, Double> c : lastOutputs
+									.entrySet()) {
+								double sug = suggestedValueForNeuron.get(c
+										.getKey());
+								shouldLowerVal += (Math.abs(c.getValue() - sug) - Math
+										.abs(c.getKey().getTriggeredStength()
+												- sug));
 							}
+							n.setThreshold(orgThr);
+							if (shouldLowerVal > 0) {
+								n.setThreshold(removeExtremes(n.getThreshold()
+										- step));
+							}
+						}
 						continue;
 					}
-					
-					
-					
-					
-					
-					HashMap<Neuron, Double> currentVals2 = new HashMap<>();
-					for (Neuron outputs : suggestedValueForNeuron.keySet()) {
-						currentVals2
-								.put(outputs, outputs.getTriggeredStength());
-					}
-					n.setWeight(n.getWeight() - (step));
+
+					for (Neuron outputs : suggestedValueForNeuron.keySet())
+						lastOutputs.put(outputs, outputs.getTriggeredStength());
+
+					n.setWeight(n.getWeight() - step);
 					n.forceTriggerUpdateTree();
 					double change2 = 0.0;
-					for (Entry<Neuron, Double> c : currentVals2.entrySet()) {
+					for (Entry<Neuron, Double> c : lastOutputs.entrySet()) {
 						// TODO: Multipled by 100 so the change is not a small
 						// number.
-						int wasRightDirection = (Math
-								.abs((suggestedValueForNeuron.get(c.getKey()) - c
-										.getKey().getTriggeredStength())) <= Math
-								.abs(suggestedValueForNeuron.get(c.getKey())
-										- c.getValue()) ? 1 : -1);
+						double sug = suggestedValueForNeuron.get(c.getKey());
+						int wasRightDirection = Math.abs(sug
+								- c.getKey().getTriggeredStength()) <= Math
+								.abs(sug - c.getValue()) ? 1 : -1;
 
 						change2 += wasRightDirection
-								* (Math.abs((c.getKey().getTriggeredStength() * 100)
-										- (c.getValue() * 100)));
+								* Math.abs(c.getKey().getTriggeredStength()
+										- c.getValue());
 						/*
 						 * change2 += ((Math
 						 * .abs((c.getKey().getTriggeredStength() * 100) -
@@ -147,7 +190,7 @@ public class DeepReinforcementUtil {
 					}
 
 					if (change2 == 0.0) {
-						n.setWeight(n.getWeight() + (step));
+						n.setWeight(n.getWeight() + step);
 					} else if (change2 < 0.0) {
 						n.setWeight(n.getWeight() + (step * 2));
 					}
@@ -158,29 +201,26 @@ public class DeepReinforcementUtil {
 						Neuron outputNeuronInstance = n.getAI()
 								.getNeuronFromId(outputNeuronId);
 
-						HashMap<Neuron, Double> currentVals = new HashMap<>();
-						for (Neuron outputs : suggestedValueForNeuron.keySet()) {
-							currentVals.put(outputs,
+						for (Neuron outputs : suggestedValueForNeuron.keySet())
+							lastOutputs.put(outputs,
 									outputs.getTriggeredStength());
-						}
+
 						n.setStrengthForNeuron(outputNeuronInstance,
 								n.getOutputForNeuron(outputNeuronInstance)
-										- (step));
+										- step);
 						n.forceTriggerStengthUpdate();
 						outputNeuronInstance.forceTriggerUpdateTree();
 						double change = 0.0;
-						for (Entry<Neuron, Double> c : currentVals.entrySet()) {
-							int wasRightDirection = (Math
-									.abs((suggestedValueForNeuron.get(c
-											.getKey()) - c.getKey()
-											.getTriggeredStength())) <= Math
-									.abs(suggestedValueForNeuron.get(c.getKey())
-											- c.getValue()) ? 1 : -1);
+						for (Entry<Neuron, Double> c : lastOutputs.entrySet()) {
+							double sug = suggestedValueForNeuron
+									.get(c.getKey());
+							int wasRightDirection = (Math.abs(sug
+									- c.getKey().getTriggeredStength()) <= Math
+									.abs(sug - c.getValue()) ? 1 : -1);
 
 							change += wasRightDirection
-									* (Math.abs((c.getKey()
-											.getTriggeredStength() * 100)
-											- (c.getValue() * 100)));
+									* Math.abs(c.getKey().getTriggeredStength()
+											- c.getValue());
 							/*
 							 * change += ((Math.abs((c.getKey()
 							 * .getTriggeredStength() * 100) - (c.getValue() *
@@ -208,70 +248,59 @@ public class DeepReinforcementUtil {
 						n.forceTriggerStengthUpdate();
 						outputNeuronInstance.forceTriggerUpdateTree();
 					}
-					
-					
-					//Do check for inherit bias of neuron
-					HashMap<Neuron, Double> currentVals3 = new HashMap<>();
-					for (Neuron outputs : suggestedValueForNeuron.keySet()) {
-						currentVals3
-								.put(outputs, outputs.getTriggeredStength());
-					}
-					n.setBias(n.getBias()-step);
+
+					// Do check for inherit bias of neuron
+					for (Neuron outputs : suggestedValueForNeuron.keySet())
+						lastOutputs.put(outputs, outputs.getTriggeredStength());
+					n.setBias(n.getBias() - step);
 					n.forceTriggerUpdateTree();
 					double change3 = 0.0;
-					for (Entry<Neuron, Double> c : currentVals3.entrySet()) {
+					for (Entry<Neuron, Double> c : lastOutputs.entrySet()) {
 						// TODO: Multipled by 100 so the change is not a small
 						// number.
-						int wasRightDirection = (Math
-								.abs((suggestedValueForNeuron.get(c.getKey()) - c
-										.getKey().getTriggeredStength())) <= Math
-								.abs(suggestedValueForNeuron.get(c.getKey())
-										- c.getValue()) ? 1 : -1);
+						double sug = suggestedValueForNeuron.get(c.getKey());
+						int wasRightDirection = Math.abs(sug
+								- c.getKey().getTriggeredStength()) <= Math
+								.abs(sug - c.getValue()) ? 1 : -1;
 
 						change2 += wasRightDirection
-								* (Math.abs((c.getKey().getTriggeredStength() * 100)
-										- (c.getValue() * 100)));
+								* Math.abs(c.getKey().getTriggeredStength()
+										- c.getValue());
 
 					}
-					//Step > 0 is already accounted for, since we already deceased the step
+					// Step > 0 is already accounted for, since we already
+					// deceased the step
 					if (change3 == 0.0) {
-						n.setBias(n.getBias()+step);
+						n.setBias(n.getBias() + step);
 					} else if (change3 < 0.0) {
-						n.setBias(n.getBias()+(step*2));
+						n.setBias(n.getBias() + (step * 2));
 					}
-					n.setBias(removeExtremes(n.getBias(),50));
+					n.setBias(removeExtremes(n.getBias(), 50));
 					n.forceTriggerUpdateTree();
-					
-					
-					
-					//Do Thresh checks after everything else if is triggered
-						if (!(n instanceof InputNeuron))
-							if (n.getTriggeredStength() > n.getThreshold()) {
-								double orgThr = n.getThreshold();
-								HashMap<Neuron, Double> currentValsThre = new HashMap<>();
-								for (Neuron outputs : suggestedValueForNeuron.keySet()) {
-									currentValsThre.put(outputs,
-											outputs.getTriggeredStength());
-								}
-								
-								n.setThreshold(2);
-								n.forceTriggerUpdateTree();
-								double shouldIncreaseVal = 0;
-								for (Entry<Neuron, Double> c : currentValsThre
-										.entrySet()) {
-									double sug = suggestedValueForNeuron.get(c
-											.getKey());
-									shouldIncreaseVal += (Math.abs(c.getValue()
-											- sug) - Math.abs(c.getKey()
-											.getTriggeredStength() - sug));
-								}
-								n.setThreshold(orgThr);
-								if (shouldIncreaseVal > 0) {
-									n.setThreshold(removeExtremes(n.getThreshold() + step));
-								}
-							}
+
+					// Do Thresh checks after everything else if is triggered
+					if (!(n instanceof InputNeuron)
+							&& n.getThreshold() < n.getTriggeredStength()) {
+						double orgThr = n.getThreshold();
+						for (Neuron outputs : suggestedValueForNeuron.keySet())
+							lastOutputs.put(outputs,
+									outputs.getTriggeredStength());
+
+						n.setThreshold(2);
+						n.forceTriggerUpdateTree();
+						double shouldIncreaseVal = 0;
+						for (Entry<Neuron, Double> c : lastOutputs.entrySet()) {
+							double sug = suggestedValueForNeuron
+									.get(c.getKey());
+							shouldIncreaseVal += (Math.abs(c.getValue() - sug) - Math
+									.abs(c.getKey().getTriggeredStength() - sug));
+						}
+						n.setThreshold(orgThr);
+						if (shouldIncreaseVal > 0)
+							n.setThreshold(removeExtremes(n.getThreshold()
+									+ step));
 					}
-				
+				}
 			}
 		}
 	}
@@ -283,6 +312,7 @@ public class DeepReinforcementUtil {
 			return -1;
 		return d;
 	}
+
 	private static double removeExtremes(double d, double max) {
 		if (d > max)
 			return max;

@@ -21,6 +21,11 @@ import me.zombie_striker.neuralnetwork.NNAI;
 import me.zombie_striker.neuralnetwork.senses.Senses2D;
 import me.zombie_striker.neuralnetwork.senses.Sensory2D_Numbers;
 
+/**
+ * DO NOT USE. Still updating!
+ * @author ZombieStriker
+ *
+ */
 
 public class InputBlockNeuron extends InputNeuron {
 	

@@ -56,19 +56,16 @@ public class InputLetterNeuron extends InputNeuron {
 			if(letters[index2]==letter)
 				break;	
 		InputNeuron link = new InputLetterNeuron(ai, index, index2, sl);
-		// link.addNeuronData(ai);
 		return link;
 	}
 	public static InputNeuron generateNeuronStatically(NNAI ai, int index,
 			int letter, Sensory2D_Letters sl) {
 		InputNeuron link = new InputLetterNeuron(ai, index, letter, sl);
-		// link.addNeuronData(ai);
 		return link;
 	}
 
 	@Override
 	public boolean isTriggered() {
-		//if (((Sensory2D_Letters) s).getWord().length() > xlink)
 			if (((Sensory2D_Letters) s).getCharacterAt(xlink) == letter)
 				return true;
 		return false;
@@ -76,7 +73,7 @@ public class InputLetterNeuron extends InputNeuron {
 
 	public InputLetterNeuron(Map<String, Object> map) {
 		super(map);
-		this.letter=(char) map.get("char");
+		this.letter= (map.get("char")+"").toCharArray()[0];
 	}
 	@Override
 	public Map<String, Object> serialize() {

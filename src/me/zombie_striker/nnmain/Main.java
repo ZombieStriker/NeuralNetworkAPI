@@ -100,6 +100,8 @@ public class Main extends JavaPlugin implements Listener {
 
 	protected static Main plugin;
 
+	protected boolean enableMetrics = true;
+
 	@Override
 	public void onDisable() {
 		plugin = null;
@@ -133,6 +135,12 @@ public class Main extends JavaPlugin implements Listener {
 		Bukkit.getPluginManager().registerEvents(
 				new ExampleSwearListener(getNn()), this);
 
+		if (!getConfig().contains("enableStats")) {
+			getConfig().set("enableStats", true);
+			saveConfig();
+		}
+		enableMetrics = getConfig().getBoolean("enableStats");
+
 		new Updater(this, 280241);
 		/**
 		 * Everyone should want the most up to date version of the plugin, so
@@ -141,14 +149,22 @@ public class Main extends JavaPlugin implements Listener {
 		 * anything, and even if I did, I would deprecate the methods for a long
 		 * period of time before I do, nothing should really break.
 		 */
-
-		Metrics metrics = new Metrics(this);
-		/**
-		 * I use bStats metrics to monitor how many servers are using my API.
-		 * This does not send any personal/private information (this only sends
-		 * the server version, Java version, the plugin's version, and system
-		 * architecture)
-		 */
+		if (enableMetrics) {
+			/**
+			 * I use bStats metrics to monitor how many servers are using my
+			 * API. This does not send any personal/private information. This
+			 * only sends:
+			 * 
+			 * the server version, Java version, 
+			 * the plugin's version, 
+			 * system architecture,
+			 * Core count,
+			 * 
+			 * You can view the stats being collected at:
+			 * https://bstats.org/plugin/bukkit/NeuralNetworkAPI
+			 */
+			Metrics metrics = new Metrics(this);
+		}
 	}
 
 	public static Main getMainClass() {

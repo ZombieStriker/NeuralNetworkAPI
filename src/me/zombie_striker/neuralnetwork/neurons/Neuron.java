@@ -62,7 +62,7 @@ public class Neuron implements ConfigurationSerializable {
 	}
 
 	public boolean isTriggered() {
-		return getTriggeredStength() > threshold;
+		return getThreshold() < getTriggeredStength();
 	}
 
 	/**

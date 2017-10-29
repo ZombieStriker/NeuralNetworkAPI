@@ -20,6 +20,11 @@ package me.zombie_striker.neuralnetwork.neurons.input;
 import me.zombie_striker.neuralnetwork.NNAI;
 import me.zombie_striker.neuralnetwork.senses.*;
 
+/**
+ * DO NOT USE. Still updating!
+ * @author ZombieStriker
+ *
+ */
 public class InputTickNeuron extends InputNeuron {
 
 	int maxTick=0;

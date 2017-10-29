@@ -29,7 +29,7 @@ public class InputNeuron extends Neuron {
 	public int ylink;
 	public int zlink;
 	
-	protected Senses s;
+	public Senses s;
 	
 	
 	///public Sensory_Vision entitiesVision;

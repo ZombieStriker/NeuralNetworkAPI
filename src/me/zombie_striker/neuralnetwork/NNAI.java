@@ -116,6 +116,11 @@ public class NNAI implements ConfigurationSerializable {
 
 	public boolean[] think() {
 		this.tick();
+		for(Layer l : this.layers){
+			for(Neuron n: l.neuronsInLayer){
+				n.forceTriggerStengthUpdate();
+			}
+		}
 		boolean[] points = new boolean[getOutputNeurons().size()];
 		for (Neuron n : getOutputNeurons()) {
 			if (n.isTriggered()) {
@@ -189,6 +194,7 @@ public class NNAI implements ConfigurationSerializable {
 				if (n != null) {
 					n.setAI(this);
 					addNeuron(n);
+					//getNeuronsInLayer(n.layer).add(n);
 				}
 			}
 		}

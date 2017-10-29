@@ -83,7 +83,6 @@ public class NNBaseEntity implements ConfigurationSerializable {
 	}
 	
 	public boolean[] tickAndThink(){
-		ai.tick();
 		return ai.think();
 	}
 
