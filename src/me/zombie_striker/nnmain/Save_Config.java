@@ -132,7 +132,7 @@ public class Save_Config{
 	}
 
 	public static void savennokld(Plugin main,NNBaseEntity e, String id) {
-		main.getConfig().set("NeuralNetworks." + id + ".layers", e.ai.MAX_LAYERS);
+		main.getConfig().set("NeuralNetworks." + id + ".layers", e.ai.maxlayers);
 		
 		StringBuilder sb_sens = new StringBuilder();
 		

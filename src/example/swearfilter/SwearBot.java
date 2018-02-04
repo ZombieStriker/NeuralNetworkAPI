@@ -107,49 +107,49 @@ public class SwearBot extends NNBaseEntity implements Controler {
 		}
 	}
 
-	@Override
-	public String update() {
-		if (shouldLearn) {
-			boolean useSwear = ThreadLocalRandom.current().nextBoolean()
-					&& ThreadLocalRandom.current().nextBoolean();
-			//The booleans are doubled to make sure swear words happen 1/4 the time, as it is more important to make sure clean words are not flagged than to go over swear words.
-			if (useSwear) {
-				word.changeWord((String) swearWords.toArray()[(int) ((swearWords
-						.size() - 1) * Math.random())]);
-			} else {
-				word.changeWord((String) cleanWords.toArray()[(int) ((cleanWords
-						.size() - 1) * Math.random())]);
-			}
+	public String learn() {
+
+		boolean useSwear = ThreadLocalRandom.current().nextBoolean()
+				&& ThreadLocalRandom.current().nextBoolean();
+		//The booleans are doubled to make sure swear words happen 1/4 the time, as it is more important to make sure clean words are not flagged than to go over swear words.
+		if (useSwear) {
+			word.changeWord((String) swearWords.toArray()[(int) ((swearWords
+					.size() - 1) * Math.random())]);
+		} else {
+			word.changeWord((String) cleanWords.toArray()[(int) ((cleanWords
+					.size() - 1) * Math.random())]);
 		}
 		boolean result = tickAndThink()[0];
+		
+		boolean isswear = swearWords.contains(word.getWord());
+		wasCorrect = result == isswear;
+		//Returns if it was a swear word;
+		
+		this.getAccuracy().addEntry(wasCorrect);
+		float accuracy = (float) this.getAccuracy().getAccuracy();
 
-		if (!shouldLearn) {
+		// IMPROVE IT
+		Neuron[] array = new Neuron[1];
+		if (isswear)
+			array[0] = ai.getNeuronFromId(0);
+		//Instead of hashmaps, since there is only 1 output neuron, is is easier to do this instead of defining the suggested value.
+		//Adding it to the array means the suggested value is +1. Not having it means it is -1.
+		
+		//only learn when it was not correct.
+		if (!wasCorrect) {
+			DeepReinforcementUtil.instantaneousReinforce(this, array, 1);
+		}
+		return ((wasCorrect ? ChatColor.GREEN : ChatColor.RED) + "acc "
+				+ ((int) (100 * accuracy)) + "|=" + word.getWord() + "|  "
+				+ result + "." + isswear + "|Swear-Score " + ((int) (100 * (ai
+				.getNeuronFromId(0).getTriggeredStength()))));
+	}
+	
+	@Override
+	public String update() {
+		boolean result = tickAndThink()[0];
 			return "" + result;
 			
-		} else {
-			boolean isswear = swearWords.contains(word.getWord());
-			wasCorrect = result == isswear;
-			//Returns if it was a swear word;
-			
-			this.getAccuracy().addEntry(wasCorrect);
-			float accuracy = (float) this.getAccuracy().getAccuracy();
-
-			// IMPROVE IT
-			Neuron[] array = new Neuron[1];
-			if (isswear)
-				array[0] = ai.getNeuronFromId(0);
-			//Instead of hashmaps, since there is only 1 output neuron, is is easier to do this instead of defining the suggested value.
-			//Adding it to the array means the suggested value is +1. Not having it means it is -1.
-			
-			//only learn when it was not correct.
-			if (!wasCorrect) {
-				DeepReinforcementUtil.instantaneousReinforce(this, array, 1);
-			}
-			return ((wasCorrect ? ChatColor.GREEN : ChatColor.RED) + "acc "
-					+ ((int) (100 * accuracy)) + "|=" + word.getWord() + "|  "
-					+ result + "." + isswear + "|Swear-Score " + ((int) (100 * (ai
-					.getNeuronFromId(0).getTriggeredStength()))));
-		}
 	}
 
 	@Override

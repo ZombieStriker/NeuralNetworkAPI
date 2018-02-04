@@ -38,8 +38,8 @@ public class PrimeNumberBot extends NNBaseEntity implements Controler {
 	public HashMap<Integer, Boolean> ifNumberIsPrime = new HashMap<>();
 
 	public PrimeNumberBot(boolean createAI) {
-		super(false,2000);
-		//We want to store the last 2000 entries, so we know how accurate it is.
+		super(false, 2000);
+		// We want to store the last 2000 entries, so we know how accurate it is.
 		initValidPrimes();
 		// this.senses.add(binary);
 
@@ -47,40 +47,36 @@ public class PrimeNumberBot extends NNBaseEntity implements Controler {
 			this.ai = NNAI.generateAI(this, 1, 5, "is A Prime");
 
 			for (int trueOrFalse = 0; trueOrFalse < 1; trueOrFalse++) {
-				//Change 1 to 2 if you also want to include if bit is false
+				// Change 1 to 2 if you also want to include if bit is false
 				for (int binaryIndex = 0; binaryIndex < 10; binaryIndex++) {
-					InputNumberNeuron.generateNeuronStatically(ai, trueOrFalse,
-							binaryIndex, this.binary);
+					InputNumberNeuron.generateNeuronStatically(ai, trueOrFalse, binaryIndex, this.binary);
 				}
 			}
-			BiasNeuron.generateNeuronStatically(ai,0);
+			BiasNeuron.generateNeuronStatically(ai, 0);
 
 			// Creates the neurons for layer 1.
-			for (int neurons = 0; neurons < 40; neurons++) 
+			for (int neurons = 0; neurons < 40; neurons++)
 				Neuron.generateNeuronStatically(ai, 1);
-			for (int neurons = 0; neurons < 20; neurons++) 
+			for (int neurons = 0; neurons < 20; neurons++)
 				Neuron.generateNeuronStatically(ai, 2);
-			for (int neurons = 0; neurons < 10; neurons++) 
+			for (int neurons = 0; neurons < 10; neurons++)
 				Neuron.generateNeuronStatically(ai, 3);
-			
 
 			connectNeurons();
 		}
 		this.setNeuronsPerRow(0, 10);
 		this.controler = this;
 	}
-	
+
 	private int lastNumber = 0;
 
-	@Override
-	public String update() {		
-		if (shouldLearn) {
-			boolean[] bbb = numberToBinaryBooleans((lastNumber++%1023)/*(int) (Math.random() * 1023)*/);
-			for (int i = 0; i < bbb.length; i++) {
-				binary.changeNumberAt(0, i, (bbb[i]) ? 1 : 0);
-				binary.changeNumberAt(1, i, (bbb[i]) ? 0 : 1);
-			}
+	public String learn() {
+		boolean[] bbb = numberToBinaryBooleans((lastNumber++ % 1023)/* (int) (Math.random() * 1023) */);
+		for (int i = 0; i < bbb.length; i++) {
+			binary.changeNumberAt(0, i, (bbb[i]) ? 1 : 0);
+			binary.changeNumberAt(1, i, (bbb[i]) ? 0 : 1);
 		}
+
 		boolean[] thought = tickAndThink();
 		float accuracy = 0;
 
@@ -93,27 +89,38 @@ public class PrimeNumberBot extends NNBaseEntity implements Controler {
 		int number = binaryBooleansToNumber(booleanBase);
 		boolean result = ifNumberIsPrime.get(number);
 
-		if (!shouldLearn) {
-			return ((thought[0] ? ChatColor.DARK_GREEN
-					: ChatColor.DARK_RED) + "|=" + number + "|WasPrime-Score " + ((int) (100 * (ai
-					.getNeuronFromId(0).getTriggeredStength()))));
+		wasCorrect = (result == thought[0]);
 
-		} else {
-			wasCorrect = (result == thought[0]);
+		this.getAccuracy().addEntry(wasCorrect);
+		accuracy = (float) this.getAccuracy().getAccuracy();
 
-			this.getAccuracy().addEntry(wasCorrect);
-			accuracy = (float) this.getAccuracy().getAccuracy();
+		// IMPROVE IT
+		HashMap<Neuron, Double> map = new HashMap<>();
+		map.put(ai.getNeuronFromId(0), result ? 1 : -1.0);
+		if (!wasCorrect)
+			DeepReinforcementUtil.instantaneousReinforce(this, map, 1);
+		return ((wasCorrect ? ChatColor.GREEN : ChatColor.RED) + "acc " + ((int) (100 * accuracy)) + "|=" + number
+				+ "|correctResp=" + result + "|WasPrime-Score "
+				+ ((int) (100 * (ai.getNeuronFromId(0).getTriggeredStength()))));
+	}
 
-			// IMPROVE IT
-			HashMap<Neuron, Double> map = new HashMap<>();
-			map.put(ai.getNeuronFromId(0), result ? 1 : -1.0);
-			if (!wasCorrect)
-				DeepReinforcementUtil.instantaneousReinforce(this, map, 1);
-			return ((wasCorrect ? ChatColor.GREEN : ChatColor.RED) + "acc "
-					+ ((int) (100 * accuracy)) + "|=" + number + "|correctResp=" + result
-					+ "|WasPrime-Score " + ((int) (100 * (ai.getNeuronFromId(0)
-					.getTriggeredStength()))));
+	@Override
+	public String update() {
+		boolean[] thought = tickAndThink();
+		float accuracy = 0;
+
+		// If it isprime:
+
+		boolean[] booleanBase = new boolean[10];
+		for (int i = 0; i < 10; i++) {
+			booleanBase[i] = binary.getNumberAt(0, i) != 0;
 		}
+		int number = binaryBooleansToNumber(booleanBase);
+		boolean result = ifNumberIsPrime.get(number);
+
+		return ((thought[0] ? ChatColor.DARK_GREEN : ChatColor.DARK_RED) + "|=" + number + "|WasPrime-Score "
+				+ ((int) (100 * (ai.getNeuronFromId(0).getTriggeredStength()))));
+
 	}
 
 	@Override
@@ -145,7 +152,7 @@ public class PrimeNumberBot extends NNBaseEntity implements Controler {
 		for (int power = 9; power >= 0; power--) {
 			if (tempnumber - Math.pow(2, power) >= 0) {
 				k[power] = true;
-				// System.out.println(tempnumber+"  -  "+(tempnumber-Math.pow(2,power)));
+				// System.out.println(tempnumber+" - "+(tempnumber-Math.pow(2,power)));
 				tempnumber -= Math.pow(2, power);
 
 			} else {
@@ -186,8 +193,7 @@ public class PrimeNumberBot extends NNBaseEntity implements Controler {
 	@Override
 	public void setInputs(CommandSender initiator, String[] args) {
 		if (this.shouldLearn) {
-			initiator
-					.sendMessage("Stop the learning before testing. use /nn stoplearning");
+			initiator.sendMessage("Stop the learning before testing. use /nn stoplearning");
 			return;
 		}
 

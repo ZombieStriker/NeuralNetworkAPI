@@ -52,8 +52,7 @@ public class NeuralNetwork {
 							Bukkit.getConsoleSender().sendMessage(s.get(0));
 							Bukkit.getConsoleSender().sendMessage(s.get(1));
 							Bukkit.getConsoleSender().sendMessage(s.get(2));
-							Bukkit.getConsoleSender().sendMessage(
-									s.size() + " more...");
+							Bukkit.getConsoleSender().sendMessage(s.size() + " more...");
 						} else {
 							for (String ss : s) {
 								if (ss != null)
@@ -94,8 +93,17 @@ public class NeuralNetwork {
 	}
 
 	/**
-	 * Starts a BukkitRunnable that will update the control every tick. Should
-	 * be used if the NN requires data from bukkit
+	 * Triggered controler#update once.
+	 */
+	public String learn() {
+		String a = base.controler.learn();
+		messages.add(a);
+		return a;
+	}
+
+	/**
+	 * Starts a BukkitRunnable that will update the control every tick. Should be
+	 * used if the NN requires data from bukkit
 	 */
 	public void start() {
 		if (this.runnable != null) {
@@ -116,16 +124,77 @@ public class NeuralNetwork {
 	 */
 	public void startLearningAsynchronously() {
 		getCurrentNeuralNetwork().setShouldLearn(true);
-		startAsynchronously();
+		if (this.runnable != null) {
+			this.runnable.cancel();
+			this.runnable = null;
+		}
+		Asyncrunning = true;
+		this.runnable = new BukkitRunnable() {
+			@Override
+			public void run() {
+				while (getCurrentNeuralNetwork().shouldLearn()) {
+					learn();
+					System.out.println("Running again");
+				}
+			}
+		}.runTaskAsynchronously(this.mainClass);
 	}
 
 	/**
-	 * Starts training the neural network. Note that this this is slower than
-	 * Async learning and may cause some lag on the server.
+	 * Starts training the neural network. Note that this NN should not make any
+	 * calls to Bukkit while training.
+	 */
+	public void startLearningAsynchronouslyONCE() {
+		getCurrentNeuralNetwork().setShouldLearn(true);
+		if (this.runnable != null) {
+			this.runnable.cancel();
+			this.runnable = null;
+		}
+		Asyncrunning = true;
+		this.runnable = new BukkitRunnable() {
+			@Override
+			public void run() {
+				learn();
+				stopLearning();
+				this.cancel();
+			}
+		}.runTaskAsynchronously(this.mainClass);
+	}
+
+	/**
+	 * Starts training the neural network. Note that this this is slower than Async
+	 * learning and may cause some lag on the server.
 	 */
 	public void startLearningSynchronously() {
 		getCurrentNeuralNetwork().setShouldLearn(true);
-		start();
+		if (this.runnable != null) {
+			this.runnable.cancel();
+			this.runnable = null;
+		}
+		this.runnable = new BukkitRunnable() {
+			@Override
+			public void run() {
+				learn();
+			}
+		}.runTaskTimer(this.mainClass, 0, 1);
+	}
+
+	/**
+	 * Starts training the neural network. Note that this this is slower than Async
+	 * learning and may cause some lag on the server.
+	 */
+	public void startLearningSynchronouslyONCE() {
+		getCurrentNeuralNetwork().setShouldLearn(true);
+		if (this.runnable != null) {
+			this.runnable.cancel();
+			this.runnable = null;
+		}
+		this.runnable = new BukkitRunnable() {
+			@Override
+			public void run() {
+				learn();
+			}
+		}.runTask(this.mainClass);
 	}
 
 	/**
@@ -138,9 +207,8 @@ public class NeuralNetwork {
 	}
 
 	/**
-	 * Starts an *Asynchronously* BukkitRunnable that will update the control
-	 * every tick. Should be used for training the NN with data not a part of
-	 * bukkit.
+	 * Starts an *Asynchronously* BukkitRunnable that will update the control every
+	 * tick. Should be used for training the NN with data not a part of bukkit.
 	 */
 	public void startAsynchronously() {
 		if (this.runnable != null) {

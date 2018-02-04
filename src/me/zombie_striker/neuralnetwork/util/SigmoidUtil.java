@@ -22,4 +22,7 @@ public class SigmoidUtil {
 	public static double sigmoidNumber(double input){
 		return 1/(1+Math.pow(Math.E,-input));
 	}
+	public static double sigmoidNumberPosAndNeg(double input){
+		return (sigmoidNumber(input)*2)-1;
+	}
 }

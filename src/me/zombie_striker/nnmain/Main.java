@@ -141,7 +141,14 @@ public class Main extends JavaPlugin implements Listener {
 		}
 		enableMetrics = getConfig().getBoolean("enableStats");
 
-		new Updater(this, 280241);
+		//new Updater(this, 280241);
+		GithubUpdater.autoUpdate(this, "ZombieStriker","NeuralNetworkAPI","NeuralNetworkAPI.jar");
+
+		if (Bukkit.getPluginManager().getPlugin("PluginConstructorAPI") == null)
+			// new DependencyDownloader(this, 276723);
+			GithubDependDownloader.autoUpdate(this,
+					new File(getDataFolder().getParentFile(), "PluginConstructorAPI.jar"), "ZombieStriker",
+					"PluginConstructorAPI", "PluginConstructorAPI.jar");
 		/**
 		 * Everyone should want the most up to date version of the plugin, so
 		 * any improvements made (either with performance or through new

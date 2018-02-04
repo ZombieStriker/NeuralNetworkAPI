@@ -62,9 +62,8 @@ public class LogicalXOR extends NNBaseEntity implements Controler {
 			connectNeurons();
 		}
 	}
-
-	@Override
-	public String update() {
+	
+	public String learn() {
 		/**
 		 * Simple explanation of these steps:
 		 * 
@@ -80,18 +79,11 @@ public class LogicalXOR extends NNBaseEntity implements Controler {
 		 * 
 		 * 6) After inprovement, return a message with if it was correct, the accuracy, the inputs, and what it thought was the output,
 		 */
-		if (shouldLearn) {
-			binary.changeValueAt(0, 0,
-					ThreadLocalRandom.current().nextBoolean());
-			binary.changeValueAt(0, 1,
-					ThreadLocalRandom.current().nextBoolean());
-		}
-
+		binary.changeValueAt(0, 0,
+				ThreadLocalRandom.current().nextBoolean());
+		binary.changeValueAt(0, 1,
+				ThreadLocalRandom.current().nextBoolean());
 		boolean[] thought = tickAndThink();
-
-		if (!shouldLearn)
-			return ("|" + binary.getBooleanAt(0, 0) + " + "
-					+ binary.getBooleanAt(0, 1) + " ~~ " + thought[0]);
 		boolean logic = (binary.getBooleanAt(0, 0) != binary.getBooleanAt(0, 1));
 		boolean wasCorrect = (logic == thought[0]);
 		this.getAccuracy().addEntry(wasCorrect);
@@ -107,7 +99,14 @@ public class LogicalXOR extends NNBaseEntity implements Controler {
 				+ getAccuracy().getAccuracyAsInt() + "|"
 				+ binary.getBooleanAt(0, 0) + " + " + binary.getBooleanAt(0, 1)
 				+ " ~~ " + thought[0];
+		
+	}
 
+	@Override
+	public String update() {
+		boolean[] thought = tickAndThink();
+			return ("|" + binary.getBooleanAt(0, 0) + " + "
+					+ binary.getBooleanAt(0, 1) + " ~~ " + thought[0]);
 	}
 
 	@Override

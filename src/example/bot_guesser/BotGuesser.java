@@ -35,10 +35,8 @@ public class BotGuesser extends NNBaseEntity implements Controler {
 	 * username. Gibberish or random usernames will return false.
 	 */
 
-	public static char[] letters = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-			'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U',
-			'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7',
-			'8', '9', '_' };
+	public static char[] letters = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+			'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_' };
 
 	public Sensory2D_Letters word = new Sensory2D_Letters("none");
 
@@ -61,8 +59,7 @@ public class BotGuesser extends NNBaseEntity implements Controler {
 			for (int index = 0; index < 16; index++) {
 				for (int character = 0; character < letters.length; character++) {
 					// 1st one is what index, the next is the actual character
-					InputLetterNeuron.generateNeuronStatically(ai, index,
-							letters[character], this.word);
+					InputLetterNeuron.generateNeuronStatically(ai, index, letters[character], this.word);
 				}
 			}
 			// Creates the neurons for layer 1.
@@ -82,59 +79,52 @@ public class BotGuesser extends NNBaseEntity implements Controler {
 		this.setNeuronsPerRow(0, letters.length);
 	}
 
+	public String learn() {
+		this.word.changeWord(
+				(String) ifNameIsValid.keySet().toArray()[(int) ((ifNameIsValid.keySet().size() - 1) * Math.random())]);
+		boolean result = tickAndThink()[0];
+		boolean ishuman = ifNameIsValid.get(base.word.getWord());
+		this.getAccuracy().addEntry(result == ishuman);
+		float accuracy = (float) this.getAccuracy().getAccuracy();
+		wasCorrect = result == ishuman;
+
+		// IMPROVE IT
+		Neuron[] array = new Neuron[1];
+		if (ishuman)
+			array[0] = base.ai.getNeuronFromId(0);
+		DeepReinforcementUtil.instantaneousReinforce(base, array, (wasCorrect ? 1 : 3));
+		return ((result == ishuman ? ChatColor.GREEN : ChatColor.RED) + "acc " + ((int) (100 * accuracy)) + "|="
+				+ base.word.getWord() + "|  " + result + "|Human-Score "
+				+ ((int) (100 * (base.ai.getNeuronFromId(0).getTriggeredStength()))));
+	}
+
 	@Override
 	public String update() {
 		/**
-		 * 1) If it should learn, select a random entry from the map. Based on
-		 * the way we propogate the map, it has a 50% chance of being a valid
-		 * name.
+		 * 1) If it should learn, select a random entry from the map. Based on the way
+		 * we propogate the map, it has a 50% chance of being a valid name.
 		 * 
 		 * 2) Tick and think.
 		 * 
-		 * 3) If it is not learning, return if it was correct, the word used,
-		 * and its "score".
+		 * 3) If it is not learning, return if it was correct, the word used, and its
+		 * "score".
 		 * 
-		 * 4) else, check if the name was a real name, and compare if the NN
-		 * gave the same answer
+		 * 4) else, check if the name was a real name, and compare if the NN gave the
+		 * same answer
 		 * 
 		 * 5) if it did not, improve it.
 		 */
-		if (shouldLearn) {
-			this.word
-					.changeWord((String) ifNameIsValid.keySet().toArray()[(int) ((ifNameIsValid
-							.keySet().size() - 1) * Math.random())]);
-		}
 		boolean result = tickAndThink()[0];
 
-		if (!shouldLearn) {
-			return ((result ? ChatColor.DARK_GREEN : ChatColor.DARK_RED) + "|="
-					+ base.word.getWord() + "|  " + result + "|Human-Score " + ((int) (100 * (base.ai
-					.getNeuronFromId(0).getTriggeredStength()))));
+		return ((result ? ChatColor.DARK_GREEN : ChatColor.DARK_RED) + "|=" + base.word.getWord() + "|  " + result
+				+ "|Human-Score " + ((int) (100 * (base.ai.getNeuronFromId(0).getTriggeredStength()))));
 
-		} else {
-			boolean ishuman = ifNameIsValid.get(base.word.getWord());
-			this.getAccuracy().addEntry(result == ishuman);
-			float accuracy = (float) this.getAccuracy().getAccuracy();
-			wasCorrect = result == ishuman;
-
-			// IMPROVE IT
-			Neuron[] array = new Neuron[1];
-			if (ishuman)
-				array[0] = base.ai.getNeuronFromId(0);
-			DeepReinforcementUtil.instantaneousReinforce(base, array,
-					(wasCorrect ? 1 : 3));
-			return ((result == ishuman ? ChatColor.GREEN : ChatColor.RED)
-					+ "acc " + ((int) (100 * accuracy)) + "|="
-					+ base.word.getWord() + "|  " + result + "|Human-Score " + ((int) (100 * (base.ai
-					.getNeuronFromId(0).getTriggeredStength()))));
-		}
 	}
 
 	@Override
 	public void setInputs(CommandSender initiator, String[] args) {
 		if (this.shouldLearn) {
-			initiator
-					.sendMessage("Stop the learning before testing. use /nn stoplearning");
+			initiator.sendMessage("Stop the learning before testing. use /nn stoplearning");
 			return;
 		}
 		if (args.length > 1) {
@@ -153,40 +143,27 @@ public class BotGuesser extends NNBaseEntity implements Controler {
 		// more accurate it will be.
 
 		// Player names
-		a("Zombie_Striker", "kermit_23", "Notch", "xephos", "lividcoffee",
-				"dinnerbone", "timtowers", "bfwalshy", "nvider", "kittengirl",
-				"Cooldude", "Meowgirl", "blabeblade", "coolio3000",
-				"aintnobodygottime", "cablebox", "Iamhopingyou", "terminator",
-				"gizmo", "snake", "mario", "theotherbrother", "theyellowone",
-				"peach", "yoshi", "otheryoshi", "sparticus", "neo", "gooby",
-				"loopy", "hewhoshallnot", "benamed", "harrypotter",
-				"ronweeezl", "hermione", "true", "false", "almond", "putin",
-				"the_donald", "donut", "lab_guy100", "Killer", "healer",
-				"p90x", "L3375p33k", "up_arrow", "down_arrow", "up", "down",
-				"left", "right", "foward", "back", "move", "look", "booster",
-				"batman", "joker", "arandomname", "isthisavailable",
-				"itseemsitis", "iamgod", "thelegend27", "iamtheone",
-				"headphone", "idontwantittothink", "thatesareagood", "thing",
-				"thang", "ThangsNStuff", "Zombie_killer", "Weezard", "towny",
-				"worldedit", "lobbyapi", "vault", "vaultboy", "chestprotect",
-				"anticheatplus", "anticheataulta", "multiworld", "protcollib",
-				"waitIhavetoLetThisthing", "Runforallthese", "options",
-				"mickey_mouse", "goofy", "pluto", "zues", "WhyDoInotlike_",
-				"_xxSlayerxx_", "Cringelord", "whatamIDoing", "Ineedtostop",
-				"someonesendhelp", "ihavenotbeendoingthis", "forthatlong",
-				"portal", "glados", "shell", "chell", "space_core",
-				"cake_core", "fact_core", "imanerd", "nerd", "cave_johnson",
-				"causeimapotatoe", "lemons", "damnyoulemons", "burninglemons",
-				"wheat", "seeds", "corn", "plow", "someshortword",
-				"somelongword", "something", "idrk", "itsjustsomething",
-				"aretheserealnames", "whywouldtheypickthis",
-				"whyareYOUreadingthis", "youcanjuststophere",
-				"thereisnothingelse", "thatwillbeinteresting",
-				"afterthispoint", "itsnotlikeim", "tired", "omg", "stopit",
-				"noreally", "cashmeoutside", "howaboutdat", "allhailhypnotoad",
-				"hypnotoad", "thinkthisistoolong", "ishouldstophere", "ornot",
-				"notlikeanyonewillsee", "this", "wink_Wink", "goodjob",
-				"youmadeit", "to_the_end", "hereissomecake", "the_cake_is_alie");
+		a("Zombie_Striker", "kermit_23", "Notch", "xephos", "lividcoffee", "dinnerbone", "timtowers", "bfwalshy",
+				"nvider", "kittengirl", "Cooldude", "Meowgirl", "blabeblade", "coolio3000", "aintnobodygottime",
+				"cablebox", "Iamhopingyou", "terminator", "gizmo", "snake", "mario", "theotherbrother", "theyellowone",
+				"peach", "yoshi", "otheryoshi", "sparticus", "neo", "gooby", "loopy", "hewhoshallnot", "benamed",
+				"harrypotter", "ronweeezl", "hermione", "true", "false", "almond", "putin", "the_donald", "donut",
+				"lab_guy100", "Killer", "healer", "p90x", "L3375p33k", "up_arrow", "down_arrow", "up", "down", "left",
+				"right", "foward", "back", "move", "look", "booster", "batman", "joker", "arandomname",
+				"isthisavailable", "itseemsitis", "iamgod", "thelegend27", "iamtheone", "headphone",
+				"idontwantittothink", "thatesareagood", "thing", "thang", "ThangsNStuff", "Zombie_killer", "Weezard",
+				"towny", "worldedit", "lobbyapi", "vault", "vaultboy", "chestprotect", "anticheatplus",
+				"anticheataulta", "multiworld", "protcollib", "waitIhavetoLetThisthing", "Runforallthese", "options",
+				"mickey_mouse", "goofy", "pluto", "zues", "WhyDoInotlike_", "_xxSlayerxx_", "Cringelord",
+				"whatamIDoing", "Ineedtostop", "someonesendhelp", "ihavenotbeendoingthis", "forthatlong", "portal",
+				"glados", "shell", "chell", "space_core", "cake_core", "fact_core", "imanerd", "nerd", "cave_johnson",
+				"causeimapotatoe", "lemons", "damnyoulemons", "burninglemons", "wheat", "seeds", "corn", "plow",
+				"someshortword", "somelongword", "something", "idrk", "itsjustsomething", "aretheserealnames",
+				"whywouldtheypickthis", "whyareYOUreadingthis", "youcanjuststophere", "thereisnothingelse",
+				"thatwillbeinteresting", "afterthispoint", "itsnotlikeim", "tired", "omg", "stopit", "noreally",
+				"cashmeoutside", "howaboutdat", "allhailhypnotoad", "hypnotoad", "thinkthisistoolong",
+				"ishouldstophere", "ornot", "notlikeanyonewillsee", "this", "wink_Wink", "goodjob", "youmadeit",
+				"to_the_end", "hereissomecake", "the_cake_is_alie");
 
 		// Bot names (the chance that one of them will be an actual name is too
 		// slim to take into account)
@@ -195,8 +172,7 @@ public class BotGuesser extends NNBaseEntity implements Controler {
 			StringBuilder sb = new StringBuilder();
 			int size = (int) (3 + (13 * Math.random()));
 			for (int letters = 0; letters < size; letters++) {
-				sb.append(BotGuesser.letters[(int) (BotGuesser.letters.length * Math
-						.random())]);
+				sb.append(BotGuesser.letters[(int) (BotGuesser.letters.length * Math.random())]);
 			}
 			ifNameIsValid.put(sb.toString(), false);
 		}

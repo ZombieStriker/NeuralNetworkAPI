@@ -96,42 +96,101 @@ public class MusicBot extends NNBaseEntity implements Controler {
 	// TODO: This is used for denoting pitch. All conversions from decimal to
 	// whole number should use this value.
 
+	public String learn() {
+
+		// This takes the training data (the music sheet), increments the
+		// training step tick, and updates the sensors to the notes.
+		int highestlength = 0;
+		for (int i = 0; i < trainingValues.length; i++) {
+			if (highestlength < trainingValues[i].length) {
+				highestlength = trainingValues[i].length;
+			}
+		}
+		training_step = (training_step + 1);
+		if (training_step >= highestlength) {
+			base.ai.setCurrentTick(0);
+			training_step = 0;
+		}
+		double[][] values = new double[base.numbers.getMatrix().length][base.numbers
+				.getMatrix()[0].length];
+		for (int row = 0; row < values.length; row++) { // Pitchstamp
+			for (int col = 0; col < values[row].length; col++) { // Timestamp
+				for (int channels = 0; channels < trainingValues.length; channels++)
+					if ((training_step - values[row].length + col >= 0)
+							&& (trainingValues[channels].length > training_step
+									- values[row].length + col && (training_step
+									- values[row].length + col >= 0 && (trainingValues[channels][training_step
+									- values[row].length + col] * PITCHES) == row))) {
+						values[row][col] = 1;
+					}
+			}
+		}
+		base.numbers.changeMatrix(values);
+		
+
+		boolean[] actions = base.tickAndThink();
+		wasLearning = true;
+
+		// Loops through all the outputs. If the output was correct, set the
+		// desired value to 1. If not, set it to -1.
+		HashMap<Neuron, Double> desiredTriggerStrengths = new HashMap<>();
+		for (int i = 0; i < actions.length; i++) {
+			boolean wasCorrect = false;
+			for (int channel = 0; channel < trainingValues.length; channel++) {
+				if (training_step < trainingValues[channel].length)
+					if (wasCorrect = (i == (int) (trainingValues[channel][training_step] * PITCHES)))
+						break;
+			}
+			desiredTriggerStrengths.put(base.ai.getNeuronFromId(i),
+					(wasCorrect ? 1 : -1.0));
+		}
+
+		// This determines if the output is equal to the training data.
+		boolean playedRightNotes = true;
+		for (int i = 0; i < actions.length; i++) {
+			boolean wasToldToBeTrue = false;
+
+			for (int channel = 0; channel < trainingValues.length; channel++) {
+				if (training_step < trainingValues[channel].length) {
+					if ((int) (trainingValues[channel][training_step] * PITCHES) == i) {
+						wasToldToBeTrue = true;
+						break;
+					}
+				}
+			}
+			if (wasToldToBeTrue != actions[i]) {
+				playedRightNotes = false;
+				break;
+			}
+		}
+
+		// Adds weather the notes were played correctly to the accuracy
+		// list.
+		this.getAccuracy().addEntry(playedRightNotes);
+		int total_accuracy = this.getAccuracy().getAccuracyAsInt();
+
+		// Make corrections so outputs are what they should be. If it made a
+		// mistake, do this three times.
+		DeepReinforcementUtil.instantaneousReinforce(base,
+				desiredTriggerStrengths, ((playedRightNotes) ? 1 : 3));
+
+		// Logger: Print out all the triggered neurons. If the output was
+		// correct, the message will be green.
+		StringBuilder activeNeurons = new StringBuilder();
+		for (Neuron omn : base.ai.getOutputNeurons()) {
+			if (omn.isTriggered())
+				activeNeurons.append(omn.getID() + ", ");
+		}
+		return (((playedRightNotes) ? ChatColor.GREEN : ChatColor.RED) + ""
+				+ total_accuracy + "% : Active neurons = " + activeNeurons
+					.toString());
+	}
+	
+	
 	@Override
 	public String update() {
-		if (shouldLearn) {
-			// This takes the training data (the music sheet), increments the
-			// training step tick, and updates the sensors to the notes.
-			int highestlength = 0;
-			for (int i = 0; i < trainingValues.length; i++) {
-				if (highestlength < trainingValues[i].length) {
-					highestlength = trainingValues[i].length;
-				}
-			}
-			training_step = (training_step + 1);
-			if (training_step >= highestlength) {
-				base.ai.setCurrentTick(0);
-				training_step = 0;
-			}
-			double[][] values = new double[base.numbers.getMatrix().length][base.numbers
-					.getMatrix()[0].length];
-			for (int row = 0; row < values.length; row++) { // Pitchstamp
-				for (int col = 0; col < values[row].length; col++) { // Timestamp
-					for (int channels = 0; channels < trainingValues.length; channels++)
-						if ((training_step - values[row].length + col >= 0)
-								&& (trainingValues[channels].length > training_step
-										- values[row].length + col && (training_step
-										- values[row].length + col >= 0 && (trainingValues[channels][training_step
-										- values[row].length + col] * PITCHES) == row))) {
-							values[row][col] = 1;
-						}
-				}
-			}
-			base.numbers.changeMatrix(values);
-		}
-		base.ai.tick();
-		boolean[] actions = base.ai.think();
+		boolean[] actions = base.tickAndThink();
 
-		if (!shouldLearn) {
 			if (wasLearning) {
 				base.ai.setCurrentTick(0);
 				wasLearning = false;
@@ -154,64 +213,6 @@ public class MusicBot extends NNBaseEntity implements Controler {
 						.isTriggered() ? n.getTriggeredStength() : 0;
 			}
 			base.numbers.changeMatrix(previousNotes);
-
-		} else {
-			wasLearning = true;
-
-			// Loops through all the outputs. If the output was correct, set the
-			// desired value to 1. If not, set it to -1.
-			HashMap<Neuron, Double> desiredTriggerStrengths = new HashMap<>();
-			for (int i = 0; i < actions.length; i++) {
-				boolean wasCorrect = false;
-				for (int channel = 0; channel < trainingValues.length; channel++) {
-					if (training_step < trainingValues[channel].length)
-						if (wasCorrect = (i == (int) (trainingValues[channel][training_step] * PITCHES)))
-							break;
-				}
-				desiredTriggerStrengths.put(base.ai.getNeuronFromId(i),
-						(wasCorrect ? 1 : -1.0));
-			}
-
-			// This determines if the output is equal to the training data.
-			boolean playedRightNotes = true;
-			for (int i = 0; i < actions.length; i++) {
-				boolean wasToldToBeTrue = false;
-
-				for (int channel = 0; channel < trainingValues.length; channel++) {
-					if (training_step < trainingValues[channel].length) {
-						if ((int) (trainingValues[channel][training_step] * PITCHES) == i) {
-							wasToldToBeTrue = true;
-							break;
-						}
-					}
-				}
-				if (wasToldToBeTrue != actions[i]) {
-					playedRightNotes = false;
-					break;
-				}
-			}
-
-			// Adds weather the notes were played correctly to the accuracy
-			// list.
-			this.getAccuracy().addEntry(playedRightNotes);
-			int total_accuracy = this.getAccuracy().getAccuracyAsInt();
-
-			// Make corrections so outputs are what they should be. If it made a
-			// mistake, do this three times.
-			DeepReinforcementUtil.instantaneousReinforce(base,
-					desiredTriggerStrengths, ((playedRightNotes) ? 1 : 3));
-
-			// Logger: Print out all the triggered neurons. If the output was
-			// correct, the message will be green.
-			StringBuilder activeNeurons = new StringBuilder();
-			for (Neuron omn : base.ai.getOutputNeurons()) {
-				if (omn.isTriggered())
-					activeNeurons.append(omn.getID() + ", ");
-			}
-			return (((playedRightNotes) ? ChatColor.GREEN : ChatColor.RED) + ""
-					+ total_accuracy + "% : Active neurons = " + activeNeurons
-						.toString());
-		}
 		return null;
 	}
 

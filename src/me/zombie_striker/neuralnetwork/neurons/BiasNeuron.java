@@ -28,10 +28,16 @@ public class BiasNeuron extends Neuron{
 	}
 	@Override
 	public double getTriggeredStength() {
+		if(droppedOut())
+			return 0;
 		return 1;
 	}
 	@Override
 	public boolean isTriggered() {
+		if(droppedOut())
+			return false;
+		if(!useThreshold())
+			return true;
 		return getThreshold() < 0.5;
 	}
 	public Neuron generateNeuron(NNAI ai) {

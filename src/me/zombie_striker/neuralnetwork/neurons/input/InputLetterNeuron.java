@@ -66,9 +66,11 @@ public class InputLetterNeuron extends InputNeuron {
 
 	@Override
 	public boolean isTriggered() {
+		if(this.tickUpdated == this.getAI().getCurrentTick())
+			return isTriggeredLast;
 			if (((Sensory2D_Letters) s).getCharacterAt(xlink) == letter)
-				return true;
-		return false;
+				return isTriggeredLast=true;
+		return isTriggeredLast=false;
 	}
 
 	public InputLetterNeuron(Map<String, Object> map) {

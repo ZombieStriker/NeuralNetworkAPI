@@ -1,0 +1,26 @@
+1.0.6
+	Added multi-Scenario-Reinforcement, which should help for non-linear/binary responses
+	CHANGED WAY NN LEARN. A "learn" method is now called when learning.
+	CHANGED WAY startLearning.... works. You now need to use startingRepeatinglyLearning.... to repeat the learning.
+	Added ability to rely on last value for isTriggered. This should reduce the amount of operations done when checking if a neuron is triggered. However, this means you can't change the input on the same tick. Instead, you will need to tick every time you change the input.
+	Added ability to turn off Thresholds. Best if used for non-binary options of multi-layer NNs
+	Added activation read-outs for output neurons
+	Adjusted TriggerStength==0 in grapher so there is an easier distinction between non-triggered neurons and neurons with 0 strength
+	Added color changes to output neuron text that signifies if the neuron is active, positive, or negitive
+	Added backPropConnections. In case you want to add new neurons to an existing NN, use this method to connect the neurons from the previous layer to the new neuron.
+	Added ability to disable negative numbers for neurons, including BiasNeurons and OutputNeurons. Output neurons that do not have negative numbers will have their activation points raised to 0.5
+
+1.0.4
+	Added osB to reduce the config saves even more.
+
+1.0.3
+	Added code-reduction for neuron classes. Config files storing NNs should be 1/3rd the size after this update.
+
+1.0.2
+	Slight change to DRutil. Should increase preformace slightly.
+
+1.0.1
+	Fixed inputletterneuron.
+
+1.0.0
+init

@@ -22,6 +22,7 @@ import java.util.*;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
 import me.zombie_striker.neuralnetwork.neurons.*;
+import me.zombie_striker.neuralnetwork.util.LossHolder;
 
 public class NNAI implements ConfigurationSerializable {
 
@@ -29,13 +30,23 @@ public class NNAI implements ConfigurationSerializable {
 	private int id = 0;
 
 	public NNBaseEntity entity;
+	/*
+	private LossHolder lossHolder = new LossHolder(500);
+	/**
+	 * Returns the lossHolder, which is usefull for determining how well the network is training
+	 * @return
+	 *
+	public LossHolder getLossHolder() {
+		return lossHolder;
+	}*/
+
 
 	private HashMap<Integer, Neuron> allNeurons = new HashMap<>();
 	private List<Layer> layers = new ArrayList<Layer>();
 
 	private int currentNeuronId = 0;
 	private int currentTick = -1;
-	public int MAX_LAYERS = -1;
+	public int maxlayers = -1;
 
 	public NNAI(NNBaseEntity nnEntityBase) {
 		this(nnEntityBase, 3);
@@ -47,9 +58,9 @@ public class NNAI implements ConfigurationSerializable {
 		entity = nnEntityBase;
 		nnEntityBase.ai = this;
 
-		this.MAX_LAYERS = layers_amount;
+		this.maxlayers = layers_amount;
 
-		for (int i = 0; i < MAX_LAYERS; i++) {
+		for (int i = 0; i < maxlayers; i++) {
 			layers.add(new Layer(i));
 		}
 	}
@@ -57,7 +68,6 @@ public class NNAI implements ConfigurationSerializable {
 	public NNAI(NNBaseEntity e, int id, boolean addToTotal) {
 		this(e, id, addToTotal, 3);
 	}
-	
 
 	public NNAI(NNBaseEntity e, int id, boolean addToTotal, int layers_amount) {
 		this.id = id;
@@ -66,13 +76,12 @@ public class NNAI implements ConfigurationSerializable {
 		entity = e;
 		e.ai = this;
 
-		this.MAX_LAYERS = layers_amount;
+		this.maxlayers = layers_amount;
 
-		for (int i = 0; i < MAX_LAYERS; i++) {
+		for (int i = 0; i < maxlayers; i++) {
 			layers.add(new Layer(i));
 		}
 	}
-
 	public void setNeuronsPerRow(int row, int amount) {
 		this.getLayer(row).setNeuronsPerRow(amount);
 	}
@@ -80,8 +89,46 @@ public class NNAI implements ConfigurationSerializable {
 	public int getNeuronsPerRow(int row) {
 		return this.getLayer(row).getNeuronsPerRow();
 	}
+
 	public Neuron getNeuronFromId(Integer n) {
 		return allNeurons.get(n);
+	}
+	/**
+	 * Dropping-out is a method used to cause the NN to generalize. Dropped-out
+	 * neurons will not be activate, and because of that, will not contribute to the
+	 * output value, causing other neurons when training to contribute more.
+	 * 
+	 * This should be called before training, and stopDropout() should be called once training is done.
+	 * 
+	 * @param chanceForDropout
+	 */
+	public void dropOutHiddenLayerNeuronsForTraining(double chanceForDropout) {
+		for(int i = 1; i < maxlayers-1; i++) {
+			for(Neuron n : getNeuronsInLayer(i)) {
+				if(Math.random()<chanceForDropout)
+					n.setTemperaryDropout(true);
+			}
+		}
+	}
+	/**
+	 * Disables the drop-out flag for all neurons that had it. This should be called after you have trained the network.
+	 */
+	public void stopDropout() {
+		for(int i = 1; i < maxlayers-1; i++) {
+			for(Neuron n : getNeuronsInLayer(i)) {
+				if(n.droppedOut())
+					n.setTemperaryDropout(false);
+			}
+		}
+	}
+	
+
+	public void forceStengthUpdateForNeuronsInAndAbove(int layer) {
+		for (int i = layer; i < maxlayers; i++) {
+			for (Neuron n : getNeuronsInLayer(i)) {
+				n.forceTriggerStengthUpdate();
+			}
+		}
 	}
 
 	public Set<Neuron> getNeuronsFromId(Collection<Integer> set) {
@@ -92,8 +139,7 @@ public class NNAI implements ConfigurationSerializable {
 		return neurons;
 	}
 
-	public static NNAI generateAI(NNBaseEntity nnEntityBase,
-			int numberOfMotorNeurons, String... names) {
+	public static NNAI generateAI(NNBaseEntity nnEntityBase, int numberOfMotorNeurons, String... names) {
 		NNAI ai = new NNAI(nnEntityBase);
 		for (int i = 0; i < numberOfMotorNeurons; i++) {
 			OutputNeuron omn = new OutputNeuron(ai, i);
@@ -103,8 +149,7 @@ public class NNAI implements ConfigurationSerializable {
 		return ai;
 	}
 
-	public static NNAI generateAI(NNBaseEntity nnEntityBase,
-			int numberOfMotorNeurons, int layers, String... names) {
+	public static NNAI generateAI(NNBaseEntity nnEntityBase, int numberOfMotorNeurons, int layers, String... names) {
 		NNAI ai = new NNAI(nnEntityBase, layers);
 		for (int i = 0; i < numberOfMotorNeurons; i++) {
 			OutputNeuron omn = new OutputNeuron(ai, i);
@@ -116,8 +161,8 @@ public class NNAI implements ConfigurationSerializable {
 
 	public boolean[] think() {
 		this.tick();
-		for(Layer l : this.layers){
-			for(Neuron n: l.neuronsInLayer){
+		for (int i = 0; i < layers.size(); i++) {
+			for (Neuron n : getNeuronsInLayer(i)) {
 				n.forceTriggerStengthUpdate();
 			}
 		}
@@ -130,10 +175,10 @@ public class NNAI implements ConfigurationSerializable {
 		}
 		return points;
 	}
-	
-	public NNAI clone(NNBaseEntity base){
-		NNAI ai = new NNAI(base,MAX_LAYERS);
-		for(int i = 0; i < allNeurons.size();i++){
+
+	public NNAI clone(NNBaseEntity base) {
+		NNAI ai = new NNAI(base, maxlayers);
+		for (int i = 0; i < allNeurons.size(); i++) {
 			allNeurons.get(i).generateNeuron(ai);
 		}
 		return ai;
@@ -154,6 +199,7 @@ public class NNAI implements ConfigurationSerializable {
 	public List<Neuron> getInputNeurons() {
 		return layers.get(0).neuronsInLayer;
 	}
+
 	public List<Neuron> getAllNeurons() {
 		return new ArrayList<Neuron>(allNeurons.values());
 	}
@@ -162,7 +208,6 @@ public class NNAI implements ConfigurationSerializable {
 		this.allNeurons.put(n.getID(), n);
 	}
 
-	
 	public int getCurrentTick() {
 		return currentTick;
 	}
@@ -186,6 +231,7 @@ public class NNAI implements ConfigurationSerializable {
 	public ArrayList<Neuron> getOutputNeurons() {
 		return getNeuronsInLayer(layers.size() - 1);
 	}
+
 	@SuppressWarnings("unchecked")
 	public NNAI(Map<String, Object> map) {
 		this.layers = (List<Layer>) map.get("l");
@@ -194,11 +240,11 @@ public class NNAI implements ConfigurationSerializable {
 				if (n != null) {
 					n.setAI(this);
 					addNeuron(n);
-					//getNeuronsInLayer(n.layer).add(n);
+					// getNeuronsInLayer(n.layer).add(n);
 				}
 			}
 		}
-		this.MAX_LAYERS = (int) map.get("ml");
+		this.maxlayers = (int) map.get("ml");
 		this.id = (int) map.get("id");
 	}
 
@@ -206,7 +252,7 @@ public class NNAI implements ConfigurationSerializable {
 	public Map<String, Object> serialize() {
 		Map<String, Object> m = new HashMap<String, Object>();
 		m.put("l", this.layers);
-		m.put("ml", this.MAX_LAYERS);
+		m.put("ml", this.maxlayers);
 		m.put("id", this.id);
 		return m;
 	}

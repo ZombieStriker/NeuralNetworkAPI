@@ -62,8 +62,8 @@ public class LogicalOR extends NNBaseEntity implements Controler {
 		}
 	}
 
-	@Override
-	public String update() {
+	
+	public String learn() {
 		/**
 		 * Simple explanation of these steps:
 		 * 
@@ -79,37 +79,35 @@ public class LogicalOR extends NNBaseEntity implements Controler {
 		 * 
 		 * 6) After inprovement, return a message with if it was correct, the accuracy, the inputs, and what it thought was the output,
 		 */
-		if (shouldLearn) {
-			binary.changeValueAt(0, 0,
-					ThreadLocalRandom.current().nextBoolean());
-			binary.changeValueAt(0, 1,
-					ThreadLocalRandom.current().nextBoolean());
-		}
-
+		binary.changeValueAt(0, 0,
+				ThreadLocalRandom.current().nextBoolean());
+		binary.changeValueAt(0, 1,
+				ThreadLocalRandom.current().nextBoolean());
 		boolean[] thought = tickAndThink();
+		boolean logic = (binary.getBooleanAt(0, 0) || binary.getBooleanAt(0, 1));
+		boolean wasCorrect = (logic == thought[0]);
+		this.getAccuracy().addEntry(wasCorrect);
 
-		if (!shouldLearn) 
-			return ("|" + binary.getBooleanAt(0, 0) + " + "
-					+ binary.getBooleanAt(0, 1) + " ~~ " + thought[0]);
-			boolean logic = (binary.getBooleanAt(0, 0) || binary.getBooleanAt(
-					0, 1));
-			boolean result = logic == thought[0];
-			this.getAccuracy().addEntry(result);
+		// IMPROVE IT
+		HashMap<Neuron, Double> map = new HashMap<>();
+		for (int i = 0; i < thought.length; i++)
+			map.put(ai.getNeuronFromId(i), logic ? 1.0 : -1.0);
+		if (!wasCorrect)
+			DeepReinforcementUtil.instantaneousReinforce(this, map,1);
 
-			// IMPROVE IT
-			HashMap<Neuron, Double> map = new HashMap<>();
-			for (int i = 0; i < thought.length; i++) 
-				map.put(ai.getNeuronFromId(i), logic ? 1 : -1.0);
-			
-			if (!result)
-				DeepReinforcementUtil.instantaneousReinforce(this, map, 1);
-			return ((result ? ChatColor.GREEN : ChatColor.RED) + "acc "
-					+ getAccuracy().getAccuracyAsInt() + "|"
-					+ binary.getBooleanAt(0, 0) + " + "
-					+ binary.getBooleanAt(0, 1) + " ~~ " + thought[0]);
+		return (wasCorrect ? ChatColor.GREEN : ChatColor.RED) + "acc "
+				+ getAccuracy().getAccuracyAsInt() + "|"
+				+ binary.getBooleanAt(0, 0) + " + " + binary.getBooleanAt(0, 1)
+				+ " ~~ " + thought[0];
 		
 	}
 
+	@Override
+	public String update() {
+		boolean[] thought = tickAndThink();
+			return ("|" + binary.getBooleanAt(0, 0) + " + "
+					+ binary.getBooleanAt(0, 1) + " ~~ " + thought[0]);
+	}
 
 	@Override
 	public void setInputs(CommandSender initiator, String[] args) {

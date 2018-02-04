@@ -19,6 +19,7 @@ package me.zombie_striker.neuralnetwork;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
@@ -40,7 +41,8 @@ public class NNBaseEntity implements ConfigurationSerializable {
 		return accuracy;
 	}
 
-	public NNBaseEntity() {}
+	public NNBaseEntity() {
+	}
 
 	public NNBaseEntity(boolean createAI) {
 		if (createAI)
@@ -56,33 +58,68 @@ public class NNBaseEntity implements ConfigurationSerializable {
 
 	public void connectNeurons() {
 		for (Neuron n : ai.getAllNeurons()) {
-			if (ai.MAX_LAYERS > n.layer + 1) {
-				// n.setWeight((Math.random() * 2) - 1);
-				// n.setWeight(0.1);
-				for (Neuron output : ai.getNeuronsInLayer(n.layer + 1)) {
-					if (output instanceof BiasNeuron)
-						continue;
-					// n.getOutputs().add(output.getID());
-					// output.getInputs().add(n.getID());
-					// n.setStrengthForNeuron(output, (Math.random() * 2) - 1);
-					n.setStrengthForNeuron(output, 0);
-				}
+			connectNeuron(n);
+		}
+	}
+
+	public void connectNeuron(Neuron n) {
+		if (ai.maxlayers > n.layer + 1) {
+			// n.setWeight((Math.random() * 2) - 1);
+			// n.setWeight(0.1);
+			for (Neuron output : ai.getNeuronsInLayer(n.layer + 1)) {
+				if (output instanceof BiasNeuron)
+					continue;
+				// n.getOutputs().add(output.getID());
+				// output.getInputs().add(n.getID());
+				// n.setStrengthForNeuron(output, (Math.random() * 2) - 1);
+				n.setStrengthForNeuron(output, 0);
 			}
 		}
 	}
-	public void randomizeNeurons(){
-		for (Neuron n : ai.getAllNeurons()) {
-			if (ai.MAX_LAYERS > n.layer + 1) {
-				n.setWeight((Math.random()*2)-1);
-				n.setThreshold((Math.random()*2)-1);
-				for (Neuron output : ai.getNeuronsInLayer(n.layer + 1)) {
-					n.setStrengthForNeuron(output, (Math.random()*2)-1);
-				}
+
+	/**
+	 * In case the neuron needs more neurons after it has already been trained, this
+	 * will add the connection from previous layers.
+	 * 
+	 * @param newNeuron
+	 *            - the new neuron that was added.
+	 */
+	public void backPropNeuronConnections(Neuron newNeuron, boolean randomize) {
+		if (newNeuron.getLayer() > 0) {
+			for (Neuron n : getAI().getNeuronsInLayer(newNeuron.getLayer() - 1)) {
+				if (n.allowNegativeValues())
+					n.setStrengthForNeuron(newNeuron, randomize ? (Math.random() * 2) - 1 : 0.1);
+				else
+					n.setStrengthForNeuron(newNeuron, randomize ? Math.random() : 0.1);
 			}
-		}		
+		}
 	}
-	
-	public boolean[] tickAndThink(){
+
+	public void randomizeNeurons() {
+		for (Neuron n : ai.getAllNeurons()) {
+			randomizeNeuron(n);
+		}
+	}
+
+	public void randomizeNeuron(Neuron n) {
+		if (ai.maxlayers > n.layer + 1) {
+			if (n.allowNegativeValues()) {
+				n.setWeight((Math.random() * 2) - 1);
+				n.setThreshold((Math.random() * 2) - 1);
+			} else {
+				n.setWeight((Math.random()));
+				n.setThreshold((Math.random()));
+			}
+			for (Neuron output : ai.getNeuronsInLayer(n.layer + 1)) {
+				if (n.allowNegativeValues()) 
+				n.setStrengthForNeuron(output, (Math.random() * 2) - 1);
+				else
+					n.setStrengthForNeuron(output, (Math.random()));
+			}
+		}
+	}
+
+	public boolean[] tickAndThink() {
 		return ai.think();
 	}
 
@@ -119,7 +156,7 @@ public class NNBaseEntity implements ConfigurationSerializable {
 		this.ai.entity = this;
 		if (map.containsKey("c")) {
 			this.controler = (Controler) map.get("c");
-		} else if(this instanceof Controler) {
+		} else if (this instanceof Controler) {
 			this.controler = (Controler) this;
 		}
 	}

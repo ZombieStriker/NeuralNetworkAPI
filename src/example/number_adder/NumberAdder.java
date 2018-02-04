@@ -41,13 +41,12 @@ public class NumberAdder extends NNBaseEntity implements Controler {
 		base = this;
 
 		if (createAI) {
-			this.ai = NNAI.generateAI(this, max_bytes + 1, 4, "1", "2", "4",
-					"8", "16", "32", "64", "128", "256", "512", "1024");
+			this.ai = NNAI.generateAI(this, max_bytes + 1, 4, "1", "2", "4", "8", "16", "32", "64", "128", "256", "512",
+					"1024");
 
 			for (int trueOrFalse = 0; trueOrFalse < 4; trueOrFalse++) {
 				for (int binaryIndex = 0; binaryIndex < max_bytes; binaryIndex++) {
-					InputBooleanNeuron.generateNeuronStatically(ai,
-							trueOrFalse, binaryIndex, this.binary);
+					InputBooleanNeuron.generateNeuronStatically(ai, trueOrFalse, binaryIndex, this.binary);
 				}
 			}
 
@@ -66,21 +65,16 @@ public class NumberAdder extends NNBaseEntity implements Controler {
 		this.controler = this;
 	}
 
-	@Override
-	public String update() {
-		if (shouldLearn) {
-			boolean[] bbb = numberToBinaryBooleans((int) (Math.random() * (Math
-					.pow(2, max_bytes))));
-			boolean[] bbb2 = numberToBinaryBooleans((int) (Math.random() * (Math
-					.pow(2, max_bytes))));
-			for (int i = 0; i < bbb.length; i++) {
-				this.binary.changeValueAt(0, i, (bbb[i]));
-				((NumberAdder) base).binary.changeValueAt(1, i, (!bbb[i]));
-			}
-			for (int i = 0; i < bbb2.length; i++) {
-				((NumberAdder) base).binary.changeValueAt(2, i, (bbb2[i]));
-				((NumberAdder) base).binary.changeValueAt(3, i, (!bbb2[i]));
-			}
+	public String learn() {
+		boolean[] bbb = numberToBinaryBooleans((int) (Math.random() * (Math.pow(2, max_bytes))));
+		boolean[] bbb2 = numberToBinaryBooleans((int) (Math.random() * (Math.pow(2, max_bytes))));
+		for (int i = 0; i < bbb.length; i++) {
+			this.binary.changeValueAt(0, i, (bbb[i]));
+			((NumberAdder) base).binary.changeValueAt(1, i, (!bbb[i]));
+		}
+		for (int i = 0; i < bbb2.length; i++) {
+			((NumberAdder) base).binary.changeValueAt(2, i, (bbb2[i]));
+			((NumberAdder) base).binary.changeValueAt(3, i, (!bbb2[i]));
 		}
 		boolean[] thought = tickAndThink();
 
@@ -97,60 +91,69 @@ public class NumberAdder extends NNBaseEntity implements Controler {
 		int number2 = binaryBooleansToNumber(booleanBase2);
 		int number3 = binaryBooleansToNumber(thought);
 
-		if (!shouldLearn) {
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < thought.length; i++) {
-				if (thought[i]) {
-					sb.append("+" + ((int) Math.pow(2, i)));
-				}
-			}
-			Bukkit.getConsoleSender().sendMessage(
-					"Byte Values = " + sb.toString());
-			return ("|" + number + " + " + number2 + " ~~ " + number3);
+		boolean result = number + number2 == number3;
+		boolean[] correctvalues = numberToBinaryBooleans(number + number2);
 
-		} else {
-			boolean result = number + number2 == number3;
-			boolean[] correctvalues = numberToBinaryBooleans(number + number2);
+		this.getAccuracy().addEntry(result);
 
-			this.getAccuracy().addEntry(result);
-
-			StringBuilder sb = new StringBuilder();
-			int amountOfMistakes = 0;
-			for (int i = 0; i < Math.max(correctvalues.length, thought.length); i++) {
-				if (i < thought.length && thought[i]) {
-					sb.append((correctvalues.length > i && correctvalues[i] ? ChatColor.DARK_GREEN
-							: ChatColor.DARK_RED)
-							+ "+" + ((int) Math.pow(2, i)));
-					if (!(correctvalues.length > i && correctvalues[i]))
-						amountOfMistakes++;
-				} else if (i < correctvalues.length && correctvalues[i]) {
-					sb.append(ChatColor.GRAY + "+" + ((int) Math.pow(2, i)));
+		StringBuilder sb = new StringBuilder();
+		int amountOfMistakes = 0;
+		for (int i = 0; i < Math.max(correctvalues.length, thought.length); i++) {
+			if (i < thought.length && thought[i]) {
+				sb.append((correctvalues.length > i && correctvalues[i] ? ChatColor.DARK_GREEN : ChatColor.DARK_RED)
+						+ "+" + ((int) Math.pow(2, i)));
+				if (!(correctvalues.length > i && correctvalues[i]))
 					amountOfMistakes++;
-				}
+			} else if (i < correctvalues.length && correctvalues[i]) {
+				sb.append(ChatColor.GRAY + "+" + ((int) Math.pow(2, i)));
+				amountOfMistakes++;
 			}
-
-			// IMPROVE IT
-			HashMap<Neuron, Double> map = new HashMap<>();
-			for (int i = 0; i < thought.length; i++) {
-				map.put(base.ai.getNeuronFromId(i), correctvalues.length > i
-						&& correctvalues[i] ? 1 : -1.0);
-			}
-
-			// amountOfMistakes = (int) Math.pow(2,amountOfMistakes);
-			if (!result)
-				DeepReinforcementUtil.instantaneousReinforce(base, map,
-						amountOfMistakes);
-			return ((result ? ChatColor.GREEN : ChatColor.RED) + "acc "
-					+ getAccuracy().getAccuracyAsInt() + "|" + number + " + "
-					+ number2 + " = " + number3 + "|  " + sb.toString());
 		}
+
+		// IMPROVE IT
+		HashMap<Neuron, Double> map = new HashMap<>();
+		for (int i = 0; i < thought.length; i++) {
+			map.put(base.ai.getNeuronFromId(i), correctvalues.length > i && correctvalues[i] ? 1 : -1.0);
+		}
+
+		// amountOfMistakes = (int) Math.pow(2,amountOfMistakes);
+		if (!result)
+			DeepReinforcementUtil.instantaneousReinforce(base, map, amountOfMistakes);
+		return ((result ? ChatColor.GREEN : ChatColor.RED) + "acc " + getAccuracy().getAccuracyAsInt() + "|" + number
+				+ " + " + number2 + " = " + number3 + "|  " + sb.toString());
+	}
+
+	@Override
+	public String update() {
+		boolean[] thought = tickAndThink();
+
+		boolean[] booleanBase = new boolean[10];
+		for (int i = 0; i < 10; i++) {
+			booleanBase[i] = base.binary.getBooleanAt(0, i);
+		}
+
+		boolean[] booleanBase2 = new boolean[10];
+		for (int i = 0; i < 10; i++) {
+			booleanBase2[i] = base.binary.getBooleanAt(2, i);
+		}
+		int number = binaryBooleansToNumber(booleanBase);
+		int number2 = binaryBooleansToNumber(booleanBase2);
+		int number3 = binaryBooleansToNumber(thought);
+
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < thought.length; i++) {
+			if (thought[i]) {
+				sb.append("+" + ((int) Math.pow(2, i)));
+			}
+		}
+		Bukkit.getConsoleSender().sendMessage("Byte Values = " + sb.toString());
+		return ("|" + number + " + " + number2 + " ~~ " + number3);
 	}
 
 	@Override
 	public void setInputs(CommandSender initiator, String[] args) {
 		if (this.shouldLearn) {
-			initiator
-					.sendMessage("Stop the learning before testing. use /nn stoplearning");
+			initiator.sendMessage("Stop the learning before testing. use /nn stoplearning");
 			return;
 		}
 
